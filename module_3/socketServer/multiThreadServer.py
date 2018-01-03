@@ -8,6 +8,12 @@ import threading
 import Queue
 
 
+## USAGE: 
+#	can be connected to as many echo servers as there are threads
+# 	server will not close until all connections are made and closed after
+
+
+
 # threading worker class
 
 class SlaveThreads(threading.Thread):
