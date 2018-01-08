@@ -31,7 +31,7 @@ import binascii
 	# first arg states we are using the packet interface
 	# second arg states that we want raw sockets
 	# third arg states that the protocol we want, 0x0800 is the IP protocol
-	# find out the protocol number by cat /usr/local/linux/if_ether.h file 
+	# find out the protocol number by cat /usr/include/linux/if_ether.h file 
 rawSocket = socket.socket(socket.PF_PACKET, socket.SOCK_RAW, socket.htons(0x0800))
 
 # recieving and read a packet
