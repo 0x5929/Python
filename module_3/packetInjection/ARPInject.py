@@ -12,6 +12,7 @@ raw.bind(("eth0",socket.htons(0x0806)))
 
 # NOTE: '/x' is the escape sequence telling python the subsequent characters are to be interpreted as hex digits
 # and each hex digit is 1 byte
+# please use cs.nyu.edu/courses/fall98/G22.2262-001/class9.html for reference
 # ARP PACKET STRUCTURE
 # bytes:   2 	         2 	     1	             1 	              2		    6	      4	      6	      4
 # -----------------------------------------------------------------------------------------------------------------
