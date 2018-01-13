@@ -1,5 +1,11 @@
 #!/usr/bin/python
 
+# used example code from https://stackoverflow.com/questions/27551367/http-get-packet-sniffer-in-scapy
+# first used a general filter, then used a more specific filter to get GET packets
+# then we used prn parameter of sniff to print out the packet info
+# sophiscated way to print out the info using new line.join and splitting the packet info into lists at new lines,
+# and joining again with new lines. REMEMBER using raw string "r" in split method, because we are splitting a raw string, 
+# and we wanted to split at the new line\r\n
 
 # importing scapy
 
