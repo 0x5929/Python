@@ -19,7 +19,7 @@ args = {
 
 encoded_args = urllib.urlencode(args)
 
-location_to_save = '/home/kevin/Python/module_4/fetchWebPages/exercise/urlRetrieve/school_catalog.pdf'
+location_to_save = '/home/kevin/Development/Python/module_4/fetchWebPages/exercise/urlRetrieve/school_catalog.pdf'
 
 # defining the progresshandler function
 
@@ -28,9 +28,8 @@ def progressHandler(block_count, block_size, total_size):
 	still_need_to_download = int(total_size - (block_count*block_size))
 	percentage = int((block_count * block_size * 100) / total_size)
 	print "*"* 100
-	print "THIS IS THE PROGRESS PERCENTAGE: ", percentage
+	print "THIS IS THE PROGRESS PERCENTAGE: " + str(percentage) + "%"
 	print "We have downloaded:  " + str(downloaded) + " bytes"
-	print "We still need to download:  " + str(still_need_to_download) + " bytes"	
 	print "*" * 100
 
 # the first arg is the url to download, second arg is the local location to save to, 
