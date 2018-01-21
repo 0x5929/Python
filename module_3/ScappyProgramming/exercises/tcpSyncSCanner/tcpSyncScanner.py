@@ -88,9 +88,12 @@ def portScanner(port):
 	# the syn packet with the flag for tcp to be S for syn for synchronize
 		# this will ask the server if the port is open depending on answer
 	SYNPkt = IP(dst=targetIP)/TCP(sport=srcPort, dport=port, flags="S")
-	SYNACKPkt = sr1(SYNPkt)
-	responseFlag = SYNACKPkt.getlayer(TCP).flags # setting the response packet flag to a variable
+        print "THIS IS THE SYN PKT: ", SYNPkt
+        SYNACKPkt = sr1(SYNPkt)
+	print "THIS IS THE SYNACK PKT", SYNACKPkt
+        responseFlag = SYNACKPkt.getlayer(TCP).flags # setting the response packet flag to a variable
 	# lets test for the flag, and see if ports are open
+        print "this is the response flag", responseFlag
 	if responseFlag == SYNACK:	# constant hex set earlier this script
 		return True
 	else:
