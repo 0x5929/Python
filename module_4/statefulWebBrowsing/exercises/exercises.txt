@@ -1,0 +1,11 @@
+module_4 video_5 exercises
+
+sign on to gmail
+
+
+mechanize.CookieJar
+	why is it useful
+	sample code to illustrate its functionaility
+
+expore: http://seleniumhq.org/support/
+	can you automate the current example in it
