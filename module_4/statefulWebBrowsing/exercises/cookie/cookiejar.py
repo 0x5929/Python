@@ -1,43 +1,51 @@
 #!/usr/bin/python
 
 
-# this script will take my google chrome browser cookie for a website, and insert it to mechanize to test if successs
+# this script will do two of the following things:
+    # first: we will try to implement the cookies into a mechanize browser and test it by reenter the page, and we should be logged in
+    # second: we will try to copy the existing cookie into a cookiejar and use it for another mechanize broswer instance to be tested
 
 import mechanize
 
-# creating the module
+##########################################                  SETUP
+
+# creating the browser
 br = mechanize.Browser()
 
-# creating cookie jar instance obj
+# this will be used for the second objective
+    # creating cookie jar instance obj
 cj = mechanize.CookieJar()
+# setting the cookie jar to the first browser, thus all of the first browser cookies will be placed in this cookie jar 
+    # so we can pass it onto our second browser instance br1
+br.set_cookiejar(cj)
+# having the browser to navigate to a specific website that we already have cookies for 
+br.open("http://localhost/DVWA")    # we have to now set the cookies, and the expiration, referenced from the mechanize docs
+br.set_cookie("PHPSESSID=m77lto4kcp4g0v4ce234kkt7cg; expires=Wednesday, 31-Jan-18 00:00:00 GMT")
+br.set_cookie("security=low; expires=Wednesday, 31-Jan-18 00:00:00 GMT")
 
-# creating cookie
-    # a cookie has the following format: 
-# Cookie(None, name, value, None, False, domain, True, False, path, True, False, None, False, None, None, None)
-#cookie1 = mechanize.Cookie(0, 'security', 'low', None, False, 'http://192.168.1.81', True, False, '/', True, False, None, False, None, None, {}, False)
+# now for the second objective, we are creating another browser instance 
+# and setting the cookie jar of the second instance with the same cookie jar as the first one
+br1 = mechanize.Browser()
+br1.set_cookiejar(cj)   # setting the first browser cj to the second browser
 
-#cookie2 = mechanize.Cookie(0, 'PHPSESSID', 'm77lto4kcp4g0v4ce234kkt7cg', None, False, 'http://192.168.1.81', True, False, '/', True, False, None, False, None, None, {}, False)
-
-br.set_simple_cookie(name='PHPSESSID', value='m77lto4kcp4g0v4ce234kkt7cg', domain='http://192.168.1.81', path='/DVWA')
-br.set_simple_cookie(name='security', value='low', domain='http://192.168.1.81', path='/DVWA')
-
-#print cookie1
-#print "####"
-#print cookie2
-
-# setting such cookie in the cookiejar
-#cj.set_cookie(cookie1)
-#cj.set_cookie(cookie2)
-
-#print "####"
-#print cj
-# having a browser set with the cookie jar
-
-#br.set_cookiejar(cj)
-
-# this is the test
+########################################                TEST
+# this is the first test
+print "testing if the first inputted cookies are set for the first browser instance"
 br.open('http://localhost/DVWA')
 print br.title()
 
+if "Welcome" in br.title():
+    print "##we passed the first test##"
+else:
+    print "##first test failed##"
 
 
+# this is the second test
+print "now testing if the second browser also recieved the cookiejar from the first browser instance"
+br1.open("http://localhost/DVWA")
+print br1.title()
+
+if "Welcome" in br1.title():
+    print "##we also passed the second test##"
+else:
+    print "##Oops, second test failed##"
