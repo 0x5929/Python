@@ -22,6 +22,8 @@
 
 
 ###############################################################################################################################################
+
+
 # importing all necessary modules
 
 import threading    # for our thread slaves
@@ -37,6 +39,12 @@ print "[!] HELLO WORLD, MY NAME IS CRAWLY AND I AM A WEBSPIDER 0.0"
 # grabbing user input
 try:    # try block grabbing url and depth count
     url = raw_input("[!] PLEASE ENTER THE WEBSITE'S URL: ")
+    try: # testing if type is string for url input
+        url = "http://" + url
+    except TypeError:
+        print "[!] You have entered a non string value for the url"
+        print "[!] Please try again, shutting down..."
+        sys.exit(1)
 
     if urllib.urlopen(url).code is not 200:     # 200 is ok for http status code
         print "[!] Crawly cannot find the web page, shutting down..."
@@ -58,7 +66,8 @@ except KeyboardInterrupt:
 # setting the input arguments in tuple, and to be passed into the main function
 inputArgs = (url, depth)
 
-# global variables
+# global variables declaration/initialization
+    
     pass
 
 # function definitions
@@ -74,6 +83,13 @@ def depth(browserInstance):
         # maybe even calling a evalLink function to do that
     # and this function can just handle if we to crawl deeper, and updates the depth current value
 
+def formParser(browserInstance):
+    
+    pass
+
+def linkParser():
+    pass
+
 # each thread will have to perform the following tasks
 def threadWork(args):
      # grabbing all inputs
@@ -82,6 +98,8 @@ def threadWork(args):
     br = mechanize.Browser()
     br.open(web_url)
     html = br.response().read()
+    htmlSoup = BeautifulSoup(html, 'lxml').prettify()
+
     pass
     # starting mechanize browser
         # connect to url, and get all the html
@@ -91,13 +109,13 @@ def threadWork(args):
     # call depth function with mechanize instance?   
 
 def main(args):
-    pass
     # starting the thread workers
     thread_workers = threading.Thread(target=threadWork, args=args) # passing user input as args for each thread
         # rememeber if deeper level is required, please enter the proper args for the main invokation in other functions
     thread.daemon = True    # making sure all thread daemons exit properly after KeyboardInterrupt
     thread.start()  # starting the threads
     # after all thread workers complete given tasks, we need to do db operations to save all to db 
+    pass
 
 # initial conditions
 if __name__ == '__main__':
