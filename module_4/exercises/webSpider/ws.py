@@ -24,7 +24,7 @@
 ###############################################################################################################################################
 
 
-# importing all necessary modules
+##############################################      IMPORTING MODULES       ###################################################################
 
 import threading    # for our thread slaves
 import mechanize    # for our web browser
@@ -33,10 +33,18 @@ import sys          # for system handling
 from bs4 import BeautifulSoup   # for parsing the html
 # TODO: also need to import mysql db module
 
-# intro system message
+##############################################################################################################################################
+
+
+#############################################       INTRO SYSTEM MESSAGE        ##############################################################
+
 print "[!] HELLO WORLD, MY NAME IS CRAWLY AND I AM A WEBSPIDER 0.0"
 
-# grabbing user input
+##############################################################################################################################################
+
+
+##############################################      GRABBING USER INPUT     ###################################################################
+
 try:    # try block grabbing url and depth count
     url = raw_input("[!] PLEASE ENTER THE WEBSITE'S URL: ")
     try: # testing if type is string for url input
@@ -63,32 +71,75 @@ except KeyboardInterrupt:
     print "[!] User has requested a shutdown, shutting down..."
     sys.exit(1)
 
+#############################################################################################################################################
+
+
+##################################################      VARIABLE DECLARATIONS AND INITIALIZATION    #########################################
 # setting the input arguments in tuple, and to be passed into the main function
 inputArgs = (url, depth)
 
 # global variables declaration/initialization
-    
-    pass
+threads = []    
+db_html = {}
+db_forms = {}
 
-# function definitions
-def evalLink(link):
+#############################################################################################################################################
+
+
+#################################################        FUNCTION DEFINITIONS       ########################################################
+
+# evalLink function will take an input of a list full of links on the html page
+# this will evaulate each link and determine the directory details of the webserver folder
+def evalLink(links):
+    urls = []
+    for url in links:   # filters through all the links for the internal ones
+        if url.startswith('http'):
+            continue    # next iteration in the for loop
+        else:   # internal links
+            urls.append(url)
+    ans = directory(urls)  # passing it to the directory function to look for directories in the internal url
+
+        # REMEMBER TO CHECK THE VALUES BELOW IF ITS EMPTY OR NOT, IF EMPTY WE STOP THE OPERATION
+         # SAME GOES FOR THE LOWER LEVEL FUNCTIONS CHECKING FOR URL IN A PAGE 
+    dirs = ans[0]   # we need to compare with depth value to see if we should go into any more directories. 
+    htmls = ans[1]  # we need to parse all of the html by calling main on each of the html urls
     pass 
     # evaluate the links in the html page, and looks at all the directories 
     # this will call another thread for each of the sub directories
 
+def directory(listofURLs):  # very computational and memory taxing
+    directories = []
+    htmls = []
+    for url in listofURLs:
+        for i in range(1, len(url)):    # iterating through each characters in the url
+            if url[i] == '/':   # this has to mean its a directory
+                directories.append(url[:i+1])  #   appending the whole url up to the first '/' char
+            else if url.endswith('.html'):  # this means its another html page in the same directory and needs to be parsed
+                htmls.append(url)   # we will append the full url, because it doesnt have '/' in it, and it ends with html, so relative to / 
+    answer = (directories, htmls)
+    return answer
+
 def depth(browserInstance):
     pass  
-    # compare depth global to instance depth 
+    # compare depth global to instance depth
     # use mechanize browser instance to evaluate links 
         # maybe even calling a evalLink function to do that
     # and this function can just handle if we to crawl deeper, and updates the depth current value
 
-def formParser(browserInstance):
-    
-    pass
+def formParser(brInstance): # takes in the browser instance from the thread worker, and creates
+                            # a list of all the form obj from the html page, and returns it to the threadworker
+                            # need to have a better way to parse the forms, in order to put inside db, need to rewatch the question video
+    forms = []
+    for form in brInstance.forms():
+        forms.append(form)
+    return forms
 
-def linkParser():
-    pass
+def linkParser(brInstance):     # takes in the browser instance from the thread worker, and creates
+                                # a list of all the link urls from the html page and returns it to the threadworker for more evaluation
+    links = []
+    for link in brInstance.links():
+        links.append(link.url)
+    return links
 
 # each thread will have to perform the following tasks
 def threadWork(args):
@@ -97,6 +148,11 @@ def threadWork(args):
     depth_count = args[1]   
     br = mechanize.Browser()
     br.open(web_url)
+    # passing in the browser at the current state to form and link parsers to retrieve info
+    forms = formParser(br)
+    links = linkParser(br)
+    linkEval(links) # evaluating links, and will invoke depth calculations in linkEval function as well
+    # below html is going to be used for db insertion, maybe pass it into another function to rearrange 
     html = br.response().read()
     htmlSoup = BeautifulSoup(html, 'lxml').prettify()
 
@@ -108,20 +164,35 @@ def threadWork(args):
     # parse all forms and also saves it to db infra?
     # call depth function with mechanize instance?   
 
+def threadStarter():
+    for thread in threads:
+        thread.daemon = True    # making sure all thread daemons exit properly after KeyboardInterrupt
+        thread.start()  # starting the thread
+        thread.join()   # making sure all threads are finished before continuing execution in main
+        threads.remove(thread)  # remove thread from the thread list, so it wont be started again
+
 def main(args):
     # starting the thread workers
     thread_workers = threading.Thread(target=threadWork, args=args) # passing user input as args for each thread
         # rememeber if deeper level is required, please enter the proper args for the main invokation in other functions
-    thread.daemon = True    # making sure all thread daemons exit properly after KeyboardInterrupt
-    thread.start()  # starting the threads
+    threads.append(thread_workers)
+    threadStarter()
     # after all thread workers complete given tasks, we need to do db operations to save all to db 
     pass
 
-# initial conditions
+def db_operations():
+    pass
+
+################################################################################################################################################
+
+
+#################################################       SCRIPT EXECUTION        ################################################################
+
 if __name__ == '__main__':
     main(inputArgs)
+    db_operations()
 
-
+################################################################################################################################################
 
 
 
