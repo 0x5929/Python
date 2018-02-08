@@ -31,7 +31,7 @@ import mechanize    # for our web browser
 import urllib       # for quick test of response code
 import sys          # for system handling
 from bs4 import BeautifulSoup   # for parsing the html
-# TODO: also need to import mysql db module
+import mysql    # mysql database
 
 ##############################################################################################################################################
 
@@ -61,7 +61,8 @@ try:    # try block grabbing url and depth count
     depth = raw_input("[!] PLEASE ENTER THE DEPTH COUNT FOR DIRECTORY INFO : ")
     
     try:    # checking if the depth input is correct for interger 
-        depth += 1
+        depth = depth + 1
+        depth = depth - 1
     except TypeError: 
         print "[!] You have entered a non interger value for the depth count"
         print "[!] Please try again, shutting down..."
@@ -99,10 +100,17 @@ def evalLink(links):
             urls.append(url)
     ans = directory(urls)  # passing it to the directory function to look for directories in the internal url
 
-        # REMEMBER TO CHECK THE VALUES BELOW IF ITS EMPTY OR NOT, IF EMPTY WE STOP THE OPERATION
          # SAME GOES FOR THE LOWER LEVEL FUNCTIONS CHECKING FOR URL IN A PAGE 
     dirs = ans[0]   # we need to compare with depth value to see if we should go into any more directories. 
-    htmls = ans[1]  # we need to parse all of the html by calling main on each of the html urls
+    htmlUrl = ans[1]  # we need to parse all of the html by calling main on each of the html urls
+                        # REMEMBER, THESE URLS ARE RELATIVE, SO WE NEED TO ADD THE CURRENT URL AND DIRECTORIES, 
+                        # UPDATE THE GLOABL URL ARG, AND UPDATE THE DEPTH COUNT TO 0 TO INVOKE MAIN
+
+        # REMEMBER TO CHECK THE VALUES BELOW IF ITS EMPTY OR NOT, IF EMPTY WE STOP THE OPERATION
+    if not dirs:
+        print "NO MORE DIRECTORIES" # NEED TO HANDLE THIS
+    if not htmls:
+        print "NO MORE HTML PAGES IN THE CURRENT DIRECTORY" # ALSO NEED TO HANDLE THIS
     pass 
     # evaluate the links in the html page, and looks at all the directories 
     # this will call another thread for each of the sub directories
@@ -119,7 +127,8 @@ def directory(listofURLs):  # very computational and memory taxing
     answer = (directories, htmls)
     return answer
 
-def depth(browserInstance):
+def depth(dirUrl):
+
     pass  
     # compare depth global to instance depth
     # use mechanize browser instance to evaluate links 
@@ -141,6 +150,11 @@ def linkParser(brInstance):     # takes in the browser instance from the thread 
         links.append(link.url)
     return links
 
+def htmlParser(html):   # takes an browser instance as arg, and spits out pretty html to the thread worker
+    html = brInstance.reponse().read()
+    prettyHtml = BeautifulSoup(html, 'lxml').prettify()
+    return prettyHtml
+
 # each thread will have to perform the following tasks
 def threadWork(args):
      # grabbing all inputs
@@ -153,9 +167,7 @@ def threadWork(args):
     links = linkParser(br)
     linkEval(links) # evaluating links, and will invoke depth calculations in linkEval function as well
     # below html is going to be used for db insertion, maybe pass it into another function to rearrange 
-    html = br.response().read()
-    htmlSoup = BeautifulSoup(html, 'lxml').prettify()
-
+    html = htmlParser(br)
     pass
     # starting mechanize browser
         # connect to url, and get all the html
