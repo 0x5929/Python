@@ -77,21 +77,22 @@ except KeyboardInterrupt:
 
 ##################################################      VARIABLE DECLARATIONS AND INITIALIZATION    #########################################
 # setting the input arguments in tuple, and to be passed into the main function
-inputArgs = (url, depth)
+inputArgs = (url,) 
 
 # global variables declaration/initialization
 threads = []    
 db_html = {}
 db_forms = {}
+current = 0
 
 #############################################################################################################################################
 
 
 #################################################        FUNCTION DEFINITIONS       ########################################################
 
-# evalLink function will take an input of a list full of links on the html page
+# evalLink function will take an input of a list full of links on the html page, and also current url to be passed back into main
 # this will evaulate each link and determine the directory details of the webserver folder
-def evalLink(links):
+def linkEval(links, currentUrl):
     urls = []
     for url in links:   # filters through all the links for the internal ones
         if url.startswith('http'):
@@ -104,14 +105,21 @@ def evalLink(links):
     dirs = ans[0]   # we need to compare with depth value to see if we should go into any more directories. 
     htmlUrl = ans[1]  # we need to parse all of the html by calling main on each of the html urls
                         # REMEMBER, THESE URLS ARE RELATIVE, SO WE NEED TO ADD THE CURRENT URL AND DIRECTORIES, 
-                        # UPDATE THE GLOABL URL ARG, AND UPDATE THE DEPTH COUNT TO 0 TO INVOKE MAIN
+                        # UPDATE THE URL FOR THE MAIN ARG TUPLE (URL,)
 
         # REMEMBER TO CHECK THE VALUES BELOW IF ITS EMPTY OR NOT, IF EMPTY WE STOP THE OPERATION
     if not dirs:
         print "NO MORE DIRECTORIES" # NEED TO HANDLE THIS
     if not htmls:
         print "NO MORE HTML PAGES IN THE CURRENT DIRECTORY" # ALSO NEED TO HANDLE THIS
-    pass 
+    if depth():  # depth call to see if we should carry on with more calling
+                # REMEMEBER THAT WE NEED TO APPEND THE CURRENTURL WITH DIRECTORY LINKS/HTML LINKS OF THIS PAGE
+        # we continue the execution, and call main for all the next level directory links
+    else:
+        # we stop the program, because we have now reach the end depth level of our crawl
+        # however we should still call main for all the html urls in this current directory other than index
+        # if there are any
+        pass 
     # evaluate the links in the html page, and looks at all the directories 
     # this will call another thread for each of the sub directories
 
@@ -127,8 +135,17 @@ def directory(listofURLs):  # very computational and memory taxing
     answer = (directories, htmls)
     return answer
 
-def depth(dirUrl):
-
+def depth():    # this will evaluate the depth count
+    global depth
+    global current
+    # first we need to increment the depth count
+    current += 1
+    if current >= depth:
+        return False    # if we are at the same level or the bigger than the depth, if the depth is at 0 by user input, or 1, 
+                        # we dont want to crawl to a lower level in the directories
+    else:               # otherwise, return True to carry on the execution, 
+                        # and wait until next link eval call to the depth call to increment the depth count, and try the test again
+        return True
     pass  
     # compare depth global to instance depth
     # use mechanize browser instance to evaluate links 
@@ -156,10 +173,10 @@ def htmlParser(html):   # takes an browser instance as arg, and spits out pretty
     return prettyHtml
 
 # each thread will have to perform the following tasks
+    #takes input of url, and parses the html, forms, and links with help of various other functions
 def threadWork(args):
      # grabbing all inputs
     web_url = args[0]
-    depth_count = args[1]   
     br = mechanize.Browser()
     br.open(web_url)
     # passing in the browser at the current state to form and link parsers to retrieve info
