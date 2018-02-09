@@ -83,7 +83,7 @@ inputArgs = (url,)
 threads = []    
 db_html = {}
 db_forms = {}
-current = 0
+current = 1
 
 #############################################################################################################################################
 
@@ -92,36 +92,26 @@ current = 0
 
 # evalLink function will take an input of a list full of links on the html page, and also current url to be passed back into main
 # this will evaulate each link and determine the directory details of the webserver folder
-def linkEval(links, currentUrl):
-    urls = []
-    for url in links:   # filters through all the links for the internal ones
-        if url.startswith('http'):
-            continue    # next iteration in the for loop
-        else:   # internal links
-            urls.append(url)
-    ans = directory(urls)  # passing it to the directory function to look for directories in the internal url
 
-         # SAME GOES FOR THE LOWER LEVEL FUNCTIONS CHECKING FOR URL IN A PAGE 
-    dirs = ans[0]   # we need to compare with depth value to see if we should go into any more directories. 
-    htmlUrl = ans[1]  # we need to parse all of the html by calling main on each of the html urls
-                        # REMEMBER, THESE URLS ARE RELATIVE, SO WE NEED TO ADD THE CURRENT URL AND DIRECTORIES, 
-                        # UPDATE THE URL FOR THE MAIN ARG TUPLE (URL,)
-
-        # REMEMBER TO CHECK THE VALUES BELOW IF ITS EMPTY OR NOT, IF EMPTY WE STOP THE OPERATION
-    if not dirs:
-        print "NO MORE DIRECTORIES" # NEED TO HANDLE THIS
-    if not htmls:
-        print "NO MORE HTML PAGES IN THE CURRENT DIRECTORY" # ALSO NEED TO HANDLE THIS
-    if depth():  # depth call to see if we should carry on with more calling
-                # REMEMEBER THAT WE NEED TO APPEND THE CURRENTURL WITH DIRECTORY LINKS/HTML LINKS OF THIS PAGE
-        # we continue the execution, and call main for all the next level directory links
-    else:
-        # we stop the program, because we have now reach the end depth level of our crawl
-        # however we should still call main for all the html urls in this current directory other than index
-        # if there are any
-        pass 
-    # evaluate the links in the html page, and looks at all the directories 
-    # this will call another thread for each of the sub directories
+def depth(directoryUrls, htmlUrls, currentUrl):    # this will evaluate the depth count
+    global current
+    readyDirUrl = []
+    readyHtmlUrl = []
+    for dirUrl in directoryUrls:    # appending the current url to the relative urls
+        dirUrl = currentUrl + '/' + dirUrl
+        readyDirlUrl.append(dirUrl)
+    for htmlUrl in htmlUrls:
+        htmlUrl = currentUrl + '/' + htmlUrl
+        readyHtmlUrl.append(htmlUrl)
+    ready = (readyDirUrl, readyHtmlUrl)
+    # we need to increment the depth count
+    current += 1
+    return ready
+    pass  
+    # compare depth global to instance depth
+    # use mechanize browser instance to evaluate links 
+        # maybe even calling a evalLink function to do that
+    # and this function can just handle if we to crawl deeper, and updates the depth current value
 
 def directory(listofURLs):  # very computational and memory taxing
     directories = []
@@ -135,22 +125,42 @@ def directory(listofURLs):  # very computational and memory taxing
     answer = (directories, htmls)
     return answer
 
-def depth():    # this will evaluate the depth count
-    global depth
-    global current
-    # first we need to increment the depth count
-    current += 1
+def linkEval(links, currentUrl):
+    urls = []
+    for url in links:   # filters through all the links for the internal ones
+        if url.startswith('http'):
+            continue    # next iteration in the for loop
+        else:   # internal links
+            urls.append(url)
+    ans = directory(urls)  # passing it to the directory function to look for directories in the internal url
+
+         # SAME GOES FOR THE LOWER LEVEL FUNCTIONS CHECKING FOR URL IN A PAGE 
+    dirs = ans[0]   # we need to compare with depth value to see if we should go into any more directories. 
+    htmlUrls = ans[1]  # we need to parse all of the html by calling main on each of the html urls
+                        # REMEMBER, THESE URLS ARE RELATIVE, SO WE NEED TO ADD THE CURRENT URL AND DIRECTORIES, 
+                        # UPDATE THE URL FOR THE MAIN ARG TUPLE (URL,)
+
+        # REMEMBER TO CHECK THE VALUES BELOW IF ITS EMPTY OR NOT, IF EMPTY WE STOP THE OPERATION
+    if not dirs:
+        print "NO MORE DIRECTORIES" # NEED TO HANDLE THIS
+    if not htmlUrls:
+        print "NO MORE HTML PAGES IN THE CURRENT DIRECTORY" # ALSO NEED TO HANDLE THIS
     if current >= depth:
-        return False    # if we are at the same level or the bigger than the depth, if the depth is at 0 by user input, or 1, 
-                        # we dont want to crawl to a lower level in the directories
-    else:               # otherwise, return True to carry on the execution, 
-                        # and wait until next link eval call to the depth call to increment the depth count, and try the test again
-        return True
-    pass  
-    # compare depth global to instance depth
-    # use mechanize browser instance to evaluate links 
-        # maybe even calling a evalLink function to do that
-    # and this function can just handle if we to crawl deeper, and updates the depth current value
+        # finished execution with this thread's work in linkeval, we dont need to go ddeper
+            # if we are at the same level or the bigger than the depth, if the depth is at 0 by user input, or 1, 
+            # we dont want to crawl to a lower level in the directories
+    else:              
+        # first we need to call the function to evalate depth, and returns tuple of list of urls to pass into the main 
+        readyDirUrls, readyHtmlUrls = depth(dirs, htmlUrls, currentUrl)
+        # we need to call main again with all the urls, both dirs, and html
+        for dirUrl in readyDirUrls:
+            main(dirUrl)
+        for htmlUrl in readyHtmlUrls:
+            main(htmlUrl)
+        pass 
+    # evaluate the links in the html page, and looks at all the directories 
+    # this will call another thread for each of the sub directories
+
 
 def formParser(brInstance): # takes in the browser instance from the thread worker, and creates
                             # a list of all the form obj from the html page, and returns it to the threadworker
@@ -180,11 +190,11 @@ def threadWork(args):
     br = mechanize.Browser()
     br.open(web_url)
     # passing in the browser at the current state to form and link parsers to retrieve info
+    # below html and forms is going to be used for db insertion, maybe pass it into another function to rearrange 
+    html = htmlParser(br)
     forms = formParser(br)
     links = linkParser(br)
-    linkEval(links) # evaluating links, and will invoke depth calculations in linkEval function as well
-    # below html is going to be used for db insertion, maybe pass it into another function to rearrange 
-    html = htmlParser(br)
+    linkEval(links, web_url) # evaluating links, and will invoke depth calculations in linkEval function as well
     pass
     # starting mechanize browser
         # connect to url, and get all the html
@@ -193,19 +203,21 @@ def threadWork(args):
     # parse all forms and also saves it to db infra?
     # call depth function with mechanize instance?   
 
-def threadStarter():
-    for thread in threads:
-        thread.daemon = True    # making sure all thread daemons exit properly after KeyboardInterrupt
-        thread.start()  # starting the thread
-        thread.join()   # making sure all threads are finished before continuing execution in main
-        threads.remove(thread)  # remove thread from the thread list, so it wont be started again
+def threadStarter(i):
+    global threads
+    current_thread = threads[i]
+    current_thread.daemon = True    # making sure all thread daemons exit properly after KeyboardINterrupt
+    current_thread.start()  # starting the thread, aka having the threadworker perform the function of threadwork
+    current_thread.join()   # making sure that this execution will not continue until the above thread finishes the work
 
 def main(args):
+    global threads
     # starting the thread workers
-    thread_workers = threading.Thread(target=threadWork, args=args) # passing user input as args for each thread
+    thread_worker = threading.Thread(target=threadWork, args=args) # passing user input as args for each thread
         # rememeber if deeper level is required, please enter the proper args for the main invokation in other functions
     threads.append(thread_workers)
-    threadStarter()
+    index = threads.index(thread_worker)
+    threadStarter(index)
     # after all thread workers complete given tasks, we need to do db operations to save all to db 
     pass
 
