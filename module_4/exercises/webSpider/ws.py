@@ -120,7 +120,6 @@ def url_factory(level):
 # OUTPUT: no return value, but will build up the global directories dictionary with series of tests
 def dataBuilder(string, lvlCount):
     global directories                                      # initiated at {} as global
-    #print string, lvlCount
     if str(lvlCount) in directories:                        # check if we have the lvl count in directory dictionary
         if string in directories[str(lvlCount)]:            # next we need to check if we have the string in the list value of the lvl count key
             pass                                            # if so, we dont need to do anything, because its already there    
@@ -140,52 +139,32 @@ def dataBuilder(string, lvlCount):
 #       we will initiate each url string with level at 1 (if repeated, will be checked by dataBuilder)
 # OUTPUT: no return value but will send string and level count to dataBuilder for checks and append to the global directories {}
 def urlTest(url, index, level):
-    print '*'*50
-    print 'url: ', url
-    print 'index: ', index
-    print 'level: ', level
-    print '*'*50
+    global depth
     global directories
-    dirIndex = url.find('/', index)                 # if we can find a / char in the url not including the index which was 
-                                                    # passed in initially with first linkTest function as 1
-    if dirIndex == -1:                               # means there is no / after the initial root /
-    #current lvl count is initiated at 1
-    #  if we do have a dirIndex meaning / after initial one:
-    #   we set the path to url up until the second /
-    #   and send it to dataBuilder with current count lvl, this case is 1
-    #   recurvively calling with same url, the new index at the dirIndex + 1, then increment the lvl count
-    #   and then we check for more url after this one, if we have another /
-    # else we dont have a /
-    #   lvl count is 1
-    #   we would want these things:
-    #   1. if it ends with .html    
-    #   2. filter through all the files that dont have a dot . in it
-    #   3. send 1 and 2 to databuilder with lvl count of current, this case is 1 
-    
-    
-    
-    if dirIndex is not -1:                          # meaning we found the second / string.find() returns -1 if not found
-        path = url[:dirIndex]                       # storing the full path up until the / char
-        if path[0] == '/':                          # most likely will happen because all paths are relative to root directory
-            path = path[1:]                         # so we strip the first initial / char
-        dataBuilder(path, level)                    # passing in both the path and the directory level to build the global directory dictionary
-                                                            # incrmenting the level variable and incrementing index variable so 
-        urlTest(url, dirIndex + 1, level+ 1)                # recursively calling itself with the index of the level to be inspected 
-   #     else:                                               # if we dont have any, and we are at the end
-    #        if url[dirIndex:].endswith('.html'):            # checking if we have any files ending with .html for more inspection
-     #           path = url                                  # taking the full path now, because there is no more directories after
-      #          dataBuilder(level + 1, path)                # calling databuilder with this path and level increment because its on the next level
-    else:                                                   # this means that the very first check if there is no / other than the first char,
-        if url.endswith('.html'):                           # we check for html
-            if url[0] == '/':
-                path = url[1:]
-            dataBuilder(path, level)                        # we invoke databuilder but with the same level, if this is run, should be lvl 1
-        elif '.' in url and not url.endswith(".html"):                                    # if we have . and we are not html, 
-            pass
-        else:                                                                             # this is what we want
-            if url[0] == '/':
-                path = url[1:]
-            dataBuilder(path, level)
+    if level <= depth and url[0] == '/':                # only under the scenario of the level is smaller than 
+                                                        #or equal to the input depth varaible 
+                                                        # and the first char is / indicating we will execute
+        dirIndex = url.find('/', index)                 # if we can find a / char in the url not including the index which was 
+                                                        # passed in initially with first linkTest function as 1
+        if dirIndex is not -1:                          # meaning we found the second / string.find() returns -1 if not found
+            path = url[1:dirIndex]                      # storing the full path up until the / char, not including the first char /
+            dataBuilder(path, level)                    # passing in both the path and the directory level 
+                                                        # to build the global directory dictionary
+                                                                # incrmenting the level variable and incrementing index variable so 
+            urlTest(url, dirIndex + 1, level+ 1)                # recursively calling itself with the index of the level to be inspected 
+        else:                                                   # this means that the very first check if there is no / other than the first char,
+            if url.endswith('.html'):                           # we check for html first
+                                                                # this means we are at the end level and we will take the full url as path
+                path = url[1:]                                  # by urlTest
+                dataBuilder(path, level)                        # we invoke databuilder but with the same level, if this is run, should be lvl 1
+            else:                                               # we dont have anything in this level that ends with .html
+                if '.' in url:                                  # checking if we have any other file with . char in it, but not a html file
+                    pass
+                else:                                           # if we dont have . char or .html url string
+                    path = url[1:]                      
+                    dataBuilder(path, level)                    # we will call dataBuilder with the url and given level count 
+
+
 
 
 # INPUT:  linkTest function will input a list of urls passed in by the linkEval function
@@ -201,7 +180,6 @@ def linkTest(listofLinks):
             continue                                                        # next iteration in the for loop
         else:                                                               # internal links
             urls.append(url)                                                # appending it to urls list, to be evauated individually with urlTest
-    print urls
     for each_url in urls:                                                   # evaluating each url
         urlTest(each_url, index, level)   
 
@@ -217,11 +195,15 @@ def linkEval(links, current_depth_count):
         print "[!!] THERE IS NO LINKS ON THIS CURRENT HTML PAGE ANYMORE"
         return
     else:
-        linkTest(links)                                     # passing it to the linkTest function, to evaluate all links 
+#        if current_depthCount == 1:
+#            urls = url_factory(current_depth_count)
+#            for url in urls:
+#                main((url, current_depth_count + 1))
         if current_depthCount >= depth:                     # this means that we are about to exceed our limit, and we dont need to crawl deeper
             return
         else:                                               # this means we still need to crawl deeper with the web spider, 
                                                             # and everything under this block is next lvl 
+            linkTest(links)                                 # passing it to the linkTest function, to evaluate all links 
             urls = url_factory(current_depth_count + 1)     # this means we need to grab all url from url_factory 
                                                             # that grabs directories with the next level urls        
             for url in urls:
