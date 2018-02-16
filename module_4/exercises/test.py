@@ -4,6 +4,31 @@ import mechanize
 import urllib
 from bs4 import BeautifulSoup
 import threading
+import argparse
+
+
+p = argparse.ArgumentParser(description='THIS IS A TEST PROGRAM')
+p.add_argument('first',  nargs='?' ,type=int, help='this is the first string to be printed')
+p.add_argument('second', nargs='?', type=str, help='this is the second string to be printed')
+a = p.parse_args()
+
+print a.first
+print a.second
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #threads = []
 

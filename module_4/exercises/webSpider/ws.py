@@ -28,52 +28,70 @@
 
 ##############################################      IMPORTING MODULES       ###################################################################
 
+import argparse                     # for command line options
 import threading                    # for our thread slaves
 import mechanize                    # for our web browser
 import urllib                       # for quick test of response code
 import sys                          # for system handling
-from bs4 import BeautifulSoup       # for parsing the html
+import getpass                      # for password hashing
 import MySQLdb                      # mysql database
+import requests
+from bs4 import BeautifulSoup       # for parsing the html
 
 ##############################################################################################################################################
 
 
-#############################################       INTRO SYSTEM MESSAGE        ##############################################################
+#############################################       PROGRAM STARTER             ##############################################################
 
-print "\n[!] HELLO WORLD, MY NAME IS CRAWLY AND I AM A WEBSPIDER 0.0"
-
-##############################################################################################################################################
+#                                    ~~~~~~~       command line options       ~~~~~~~                                                       
 
 
-##############################################      GRABBING USER INPUT     ###################################################################
+program_description = 'HELLO WORLD, MY NAME IS CRAWLY AND I AM A WEBSPIDER 0.0'
+parser = argparse.ArgumentParser(description=program_description)                                                   # starting out the parser, also passing in desc
+parser.add_argument('url', nargs='?', help='The website URL for Crawly to inspect')                                 # adding url arg
+parser.add_argument('-d', '--depth',  type=int , default=1, required=False, help="The depth of the inspection")     # adding the depth arg       
+args = parser.parse_args()                                                                                          # parsing all args to work with
 
-#try:                                                               # try block to grab url and depth count
-#    url = raw_input("[!] PLEASE ENTER THE WEBSITE'S URL: ")
-#    try:                                                           # testing if type is string for url input
-#        url = "http://" + url
-#    except TypeError:
-#        print "[!] You have entered a non string value for the url"
-#        print "[!] Please try again, shutting down..."
-#        sys.exit(1)
-#
-#    if urllib.urlopen(url).code is not 200:                        # 200 is ok for http status code
-#        print "[!] Crawly cannot find the web page, shutting down..."
-#        sys.exit(1)
-#    
-#    depth = int(raw_input("[!] PLEASE ENTER THE DEPTH COUNT FOR DIRECTORY INFO : "))
-#    
-#    try:                                                           # checking if the depth input is correct for interger 
-#
-#        depth = depth + 1
-#        depth = depth - 1
-#    except TypeError: 
-#        print "[!] You have entered a non interger value for the depth count"
-#        print "[!] Please try again, shutting down..."
-#        sys.exit(1)
 
-#except KeyboardInterrupt:
-#    print "[!] User has requested a shutdown, shutting down..."
-#    sys.exit(1)
+#                                     ~~~~~~~       conditinoal startup         ~~~~~~                                                        
+
+if args.url is not None and args.depth is not None:                                                         # if we have commandline user input
+    url = "http://" + args.url                                                                              # setting the url for input arg
+    if urllib.urlopen(url).code is not 200:                                                                 # simple test if url is valid
+        print "[!] Crawly cannot find the web page, shutting down..."                       
+        sys.exit(1) 
+    depth = args.depth                                                                                      # setting the depth variable
+    db_password = getpass.getpass("[!] Please enter the crawly database's password: ")                      # grabbing the password for database operations
+else:                                                                                                       # else, we need to manually get it from user
+    print "\n[!] HELLO WORLD, MY NAME IS CRAWLY AND I AM A WEBSPIDER 0.0"                                   # system message
+    
+    try:                                                                                                    # try block to grab url and depth count
+        url = raw_input("[!] PLEASE ENTER THE WEBSITE'S URL: ")
+        try:                                                                                                # testing if type is string for url input
+            url = "http://" + url
+        except TypeError:
+            print "\n[!] You have entered a non string value for the url"
+            print "\n[!] Please try again, shutting down..."
+            sys.exit(1)
+    
+        if urllib.urlopen(url).code is not 200:                                                             # 200 is ok for http status code
+            print "\n[!] Crawly cannot find the web page, shutting down..."
+            sys.exit(1)
+        
+        depth = int(raw_input("[!] PLEASE ENTER THE DEPTH COUNT FOR DIRECTORY INFO : "))
+        
+        try:                                                                                                # checking if the depth input is correct for interger 
+    
+            depth = depth + 1
+            depth = depth - 1
+        except TypeError: 
+            print "\n[!] You have entered a non interger value for the depth count"
+            print "[!] Please try again, shutting down..."
+            sys.exit(1)
+            db_password = getpass.getpass("[!] Please enter the crawly database's password: ")              # grabbing the password for database operations
+    except KeyboardInterrupt:
+        print "\n[!] User has requested a shutdown, shutting down..."
+        sys.exit(1)
 
 
 ################################################################################################################################################
@@ -82,8 +100,8 @@ print "\n[!] HELLO WORLD, MY NAME IS CRAWLY AND I AM A WEBSPIDER 0.0"
 ##################################################      GLOBAL VARIABLE ASSIGNMENT    ###########################################################
 
 # for developing and testing purpose:
-url = 'http://www.github.com/rennitbaby'
-depth = 2
+#url = 'http://www.github.com/rennitbaby'
+#depth = 2
 # global variables assignment/initialization
 base_url = ''
 threads = []    
@@ -91,9 +109,9 @@ db_html_table = []
 db_forms_table = []
 directories = {}                                        # data structure: {'1': ['url1', url2], '2': ['url3', 'url4']}
 current_depthCount = 1
-
-# setting the input arguments in tuple, and to be passed into the main function
-inputArgs = (url, current_depthCount) 
+closing_message = "\n[!] Crawly the web spider is now complete with all of his tasks, shutting down..."
+inputArgs = (url, current_depthCount)                   # setting the input arguments in tuple, and to be passed into the main function
+ 
 
 #############################################################################################################################################
 
@@ -192,7 +210,6 @@ def linkTest(listofLinks):
 def linkEval(links, current_depth_count):
     global depth                                            # this is user input
     if not links:                                           # test if our current links list if its empty
-        print "[!!] THERE IS NO LINKS ON THIS CURRENT HTML PAGE ANYMORE"
         return
     else:
 #        if current_depthCount == 1:
@@ -222,21 +239,21 @@ def dbInfra(args):
     global db_html_table
     global db_forms_table
     url, html, forms = args   
-    html_data = (url, 'development html')               # for development, we will only use 'development html' and not the real html
+#    html_data = (url, 'development html')               # for development, we will only use 'development html' and not the real html
+    html_data = (url, html)
     if not forms:                                       # forms is an empty list on this current evaluated page, 
                                                         # then we just append to the html db table
         db_html_table.append(html_data)      
     else:                                               # if forms were available, we will append to html and forms table
-        html_data = (url, 'h')                          # appending to html table
         db_html_table.append(html_data)
         for inputTuple in forms:                        # appending to forms table
             Name = inputTuple[0]
             Id = inputTuple[1]
             Type = inputTuple[2]
-            Class = inputTuple[3]
+            Value = inputTuple[3]
             Placeholder = inputTuple[4]
             Disabled = inputTuple[5]
-            form_data = (url, Name, Id, Type, Class, Placeholder, Disabled)
+            form_data = (url, Name, Id, Type, Value, Placeholder, Disabled)
             db_forms_table.append(form_data)
 
 
@@ -251,11 +268,10 @@ def formParser(bs):
         Name = eachInput.get('name')
         Id = eachInput.get('id')
         Type = eachInput.get('type')
-        Class = eachInput.get('class')
         Value = eachInput.get('value')
         Placeholder = eachInput.get('placeholder')
         Disabled = eachInput.get('disabled')
-        forms.append((Name, Id, Type, Class, Value, Placeholder, Disabled))
+        forms.append((Name, Id, Type, Value, Placeholder, Disabled))
     return forms                                            # outputs a list of tuples full of each input form's info
 
 
@@ -272,32 +288,36 @@ def linkParser(brInstance):
         return links
 
 
-# INPUT: takes an browser instance as arg, 
+# INPUT: inputs an url called by the thread worker
 # OUTPUT: returns a tuple with a html to be insert to db structure, and another html to be worked with in formParse
-def htmlParser(brInstance):  
-    html = brInstance.response().read()                     # grabbing the html response from the mechanize browser instance
+def htmlParser(url):  
+    html = requests.get(url).content                        # grabbing the html response from the mechanize browser instance
     workHtml = BeautifulSoup(html, 'lxml')                  # parsing using lxml parser
-    prettyHtml = workHtml.prettify()                        # using prettify method from beautifulSoup to make html more readable
+    prettyHtml = workHtml.get_text()                        # using prettify method from beautifulSoup to make html more readable
     return (prettyHtml, workHtml)
 
 # INPUT: inputs tuple of url and current depth lvl (initated at lvl 1) from the main function where thread is defined 
 # OUTPUT: no return value, but each thread will have to perform the following tasks
 def threadWork(args):                               
-    web_url = args[0]                                   # grabbing all inputs
+    web_url = args[0]                                       # grabbing all inputs
     current_depth_lvl = args[1]                         
-    br = mechanize.Browser()                            # starting the mechanize browser instance
-    br.set_handle_robots(False)                         # make sure we are robot.txt friendly
-    br.open(web_url)                                    # using the browser instance to open the url passed in
-    dbHtml, workHtml = htmlParser(br)                   # passing in the browser at the current state to html parser to retrieve htmls
-    links = linkParser(br)                              # passing the browser at the current state to the link parser to retrieve links 
-    forms = formParser(workHtml)                        # passing in the working html for formParser to get parsed forms 
-    br.close()                                          # closing the browser, since we have no more work for it in this thread worker
-    dbInfra((web_url, dbHtml, forms))                   # passing url, and all parsed info to the dbInfra to build db structure 
-    linkEval(links, current_depth_lvl)                  # evaluating links, will invoke linkTest --> urlTest --> dataBuilder --> 
-                                                        # update global directories {}
-                                                        # linkEval will test against global depth, with currentDepthLvl 
-                                                        # if needed invokes url_factory for urls 
-                                                        # to be called recursivly with main but increments the depthcount
+    br = mechanize.Browser()                                # starting the mechanize browser instance
+    br.set_handle_robots(False)                             # make sure we are robot.txt friendly
+    try: 
+        br.open(web_url)                                    # using the browser instance to open the url passed in
+        dbHtml, workHtml = htmlParser(web_url)              # retrieving htmls
+        links = linkParser(br)                              # passing the browser at the current state to the link parser to retrieve links 
+        forms = formParser(workHtml)                        # passing in the working html for formParser to get parsed forms 
+        br.close()                                          # closing the browser, since we have no more work for it in this thread worker
+        dbInfra((web_url, dbHtml, forms))                   # passing url, and all parsed info to the dbInfra to build db structure 
+        linkEval(links, current_depth_lvl)                  # evaluating links, will invoke linkTest --> urlTest --> dataBuilder --> 
+                                                            # update global directories {}
+                                                            # linkEval will test against global depth, with currentDepthLvl 
+                                                            # if needed invokes url_factory for urls 
+                                                            # to be called recursivly with main but increments the depthcount
+    except Exception as e: 
+        print e
+        return                                              # closing out threads that are producing errors, usually its a 403 error from br.open(url)
 
 
 
@@ -342,12 +362,44 @@ def baseUrl(fullUrl):
 # INPUT: db_operations require no input
 # OUTPUT: no return value, but db_operations will perform mysql db operations and insert all found data to the db
 def db_operations():
+    global threads
+    print threads
+    global db_password
     global db_html_table
     global db_forms_table
-    ## do database operations: INSERT
-    print db_html_table
-    print "="*100
-    print db_forms_table
+    lengthOfHtmlRows = str(len(db_html_table))
+    lengthOfFormsRows = str(len(db_forms_table))
+    print lengthOfFormsRows, lengthOfHtmlRows
+    host   = "localhost"
+    user   = "kevin"
+    passwd = db_password
+    db = 'crawly'
+    show_html_table_sql_stmt = "SELECT *  FROM html"
+#    show_forms_table_sql_stmt = "SELECT * FROM forms ORDER BY domain DESC limit " + lengthOfFormsRows
+    html_insert_sql_stmt = "INSERT INTO html (domain, html) VALUES (%s, %s)"
+    forms_insert_sql_stmt = """INSERT INTO forms (domain,
+                                                 input_name,
+                                                 input_id, 
+                                                 input_type, 
+                                                 input_value, 
+                                                 input_placeholder, 
+                                                 input_disabled) VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+    
+    try: 
+        conn = MySQLdb.connect(host, user, passwd, db, charset="utf8")
+        conn.autocommit(True)                                                       # commiting to each insert save
+        cursor = conn.cursor()                                                      # create cursor object to execute commands
+        cursor.executemany(html_insert_sql_stmt, db_html_table)                     # inserting to the html table
+        cursor.execute(show_html_table_sql_stmt)                                    # displaying the recent html table
+        cursor.executemany(forms_insert_sql_stmt, db_forms_table)                   # inserting to the forms table
+#        cursor.execute(show_forms_table_sql_stmt)                                   # displaying the recent forms table
+        conn.close()
+    except Exception as e: 
+        print e
+        print "\n[!] SOMETHING WENT WRONG WHEN WE TRIED TO CONNECT TO MYSQL DATABASE, PLEASE RE-ENTER PASSWORD AND TRY AGAIN"
+        print "[!] Shutting down...."
+        sys.exit(1)
+
 
 
 
@@ -361,7 +413,7 @@ if __name__ == '__main__':
     baseUrl(url)                    # this is to update the global value of baseUrl to be used for url_factory link appending purposes
     main(inputArgs)                 # main function --> executes thread workers --> executes db infra, and crawls deeper if needed
     db_operations()                 # database operations, for db insertion at the very end
-    print "\n[!] Crawly the web spider is now complete with all of his tasks, shutting down..."
+    print closing_message
     sys.exit(0)                     # gracefully exits the system
 
 ################################################################################################################################################
