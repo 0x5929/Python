@@ -291,10 +291,14 @@ def linkParser(brInstance):
 # INPUT: inputs an url called by the thread worker
 # OUTPUT: returns a tuple with a html to be insert to db structure, and another html to be worked with in formParse
 def htmlParser(url):  
-    html = requests.get(url).content                        # grabbing the html response from the mechanize browser instance
-    workHtml = BeautifulSoup(html, 'lxml')                  # parsing using lxml parser
-    prettyHtml = workHtml.get_text()                        # using prettify method from beautifulSoup to make html more readable
-    return (prettyHtml, workHtml)
+    response = requests.get(url)                                         # grabbing the html response from the request instance
+    encoding = response.encoding if 'charset' in  response.headers.get('content-type', '').lower() else None
+    workHtml  = BeautifulSoup(response.content, "lxml")                  # parsing using lxml parser
+    dbHtml = workHtml.encode("utf-8")                                        # encoding the html to utf8 for db insertion later
+    return (dbHtml, workHtml)               
+
+
+
 
 # INPUT: inputs tuple of url and current depth lvl (initated at lvl 1) from the main function where thread is defined 
 # OUTPUT: no return value, but each thread will have to perform the following tasks
@@ -316,8 +320,10 @@ def threadWork(args):
                                                             # if needed invokes url_factory for urls 
                                                             # to be called recursivly with main but increments the depthcount
     except Exception as e: 
-        print e
-        return                                              # closing out threads that are producing errors, usually its a 403 error from br.open(url)
+        print "\n[!] ERROR FROM THREAD NUMBER WORKING WITH: ", web_url
+        print "[!] ERROR MESSAGE: ", e
+        return                                              # closing out threads that are producing errors
+                                                            # usually its a 403 error from br.open(url)
 
 
 
@@ -363,19 +369,15 @@ def baseUrl(fullUrl):
 # OUTPUT: no return value, but db_operations will perform mysql db operations and insert all found data to the db
 def db_operations():
     global threads
-    print threads
     global db_password
     global db_html_table
     global db_forms_table
     lengthOfHtmlRows = str(len(db_html_table))
     lengthOfFormsRows = str(len(db_forms_table))
-    print lengthOfFormsRows, lengthOfHtmlRows
     host   = "localhost"
     user   = "kevin"
     passwd = db_password
     db = 'crawly'
-    show_html_table_sql_stmt = "SELECT *  FROM html"
-#    show_forms_table_sql_stmt = "SELECT * FROM forms ORDER BY domain DESC limit " + lengthOfFormsRows
     html_insert_sql_stmt = "INSERT INTO html (domain, html) VALUES (%s, %s)"
     forms_insert_sql_stmt = """INSERT INTO forms (domain,
                                                  input_name,
@@ -390,13 +392,11 @@ def db_operations():
         conn.autocommit(True)                                                       # commiting to each insert save
         cursor = conn.cursor()                                                      # create cursor object to execute commands
         cursor.executemany(html_insert_sql_stmt, db_html_table)                     # inserting to the html table
-        cursor.execute(show_html_table_sql_stmt)                                    # displaying the recent html table
         cursor.executemany(forms_insert_sql_stmt, db_forms_table)                   # inserting to the forms table
-#        cursor.execute(show_forms_table_sql_stmt)                                   # displaying the recent forms table
+        print "\n[!] Crawly has successfully been updated, closing database connection..."
         conn.close()
     except Exception as e: 
-        print e
-        print "\n[!] SOMETHING WENT WRONG WHEN WE TRIED TO CONNECT TO MYSQL DATABASE, PLEASE RE-ENTER PASSWORD AND TRY AGAIN"
+        print "\n[!] Error when updating the database: ", e
         print "[!] Shutting down...."
         sys.exit(1)
 
