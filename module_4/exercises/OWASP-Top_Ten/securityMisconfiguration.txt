@@ -1,0 +1,9 @@
+Security misconfiguration
+For better secure applications, it requires a secure configuration of each of its underlying technologies, like application, web server, database server, and operating system. Also, we need to keep all software up to date. Some of the examples for security misconfigurations are as follows:
+
+Outdated software
+Presence of sample application or sample databases in server
+Enabling directory listings that lead to data disclosure, including codebase
+Unhandled error pages, which can reveal sensitive information
+Active default passwords in the applicable or applicable framework
+We can use Python scripts to verify these types of vulnerabilities. As we discussed in the previous sections, we can use Python libraries to send crafted requests and analyze their responses.

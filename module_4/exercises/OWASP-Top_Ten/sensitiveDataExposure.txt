@@ -1,0 +1,4 @@
+Sensitive data exposure
+We could write customized Python scripts to check the possible data exposure in the web pages. For instance, we have discussed the e-mail gathering script in the previous chapter, which could also be used to check if there are any e-mail IDs exposed in the web pages.
+
+For that, we have to write a script to check the HTTP responses for the patterns we are looking for. Sensitive data may vary according to the website and its usage. But we can check for the exposure of sensitive information like credit card, bank details, Personal Identification numbers, and many more.

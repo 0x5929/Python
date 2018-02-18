@@ -1,0 +1,4 @@
+Using components with known vulnerabilities
+This type of vulnerability occurs when we use components like libraries, frameworks, and so on without proper validation. These components may always execute in full privilege in the application. So, when a vulnerable component is used in the application, it makes the job easier for an attacker. We can write a Python script to check the versions of used components in the application and to verify it with Open Source Vulnerability Database (OSVDB) for any unpatched known vulnerabilities.
+
+OSVDB lists almost all known vulnerabilities for libraries and frameworks. So we have to make sure that we are using the latest components with the latest patches applied on them.

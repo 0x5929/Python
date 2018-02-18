@@ -1,0 +1,48 @@
+Cross-site scripting (XSS)
+Cross-site scripting is also a type of injection attack, which occurs when attackers inject malicious attack vectors in the form of a browser-side script. This occurs when a web application uses input from a user to craft the output without validating or encoding it.
+
+We could modify the script used to inject SQL attack vectors to test XSS injection. To verify the output response, we could search for the expected script in the response:
+
+
+
+import mechanize 
+ 
+url = "http://www.webscantest.com/crosstraining/aboutyou.php" 
+ 
+browser = mechanize.Browser() 
+ 
+attackNumber = 1 
+ 
+with open('XSS-vectors.txt') as f: 
+ 
+    for line in f: 
+ 
+         browser.open(url) 
+ 
+         browser.select_form(nr=0) 
+ 
+         browser["fname"] = line 
+ 
+         res = browser.submit() 
+ 
+         content = res.read() 
+ 
+         # check the attack vector is printed in the response. 
+         if content.find(line) > 0: 
+ 
+               print "Possible XXS" 
+ 
+          
+ 
+   output = open('response/'+str(attackNumber)+'.txt', 'w') 
+ 
+   output.write(content) 
+ 
+   output.close() 
+ 
+   print attackNumber 
+ 
+   attackNumber += 1 
+
+
+XSS occurs when user input prints to the response without any validation. So, to check the possibility of an XSS attack, we can check the response text for the attack vector we provided. If the attack vector is present in the response without any escaping or validation there is a high possibility of XSS attack.
