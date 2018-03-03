@@ -118,7 +118,7 @@ int main(int argc, char** argv)
 								// reading 100 bytes
 		if (strlen(recv_str) == 0)			// to check if client terminates, the recived string, or sent from client is 
 		{						// emtpy, because the client disconnects and sent a termination of program
-			printf("\n[!] Client disconnected, shutting off...\n");
+			printf("\n[!] Client disconnected, getting ready to shut down...\n");
 			break;					// and recieved string will eventually get a one that is no length string
 		}						// while all other time its just waiting for client sender, now breaking out loop
 
@@ -133,6 +133,20 @@ int main(int argc, char** argv)
 		write(communicate_fd, send_str, strlen(send_str)+1);
 
 	}
+
+	#if PREDEF_PLATFORM_MS == 1
+		printf("\n[!] Getting ready to shut down winsock api, and ms system\n");
+		printf("\n[!] Closing socket, shutting off...\n");
+		closesocket(communicate_fd);
+		closesocket(listen_fd);
+		WSACleanup();
+	#elif PREDEF_PLATFORM_UNIX == 1
+		printf("\n[!] Getting ready to shutdown unix system\n");
+		printf("\n[!] Closing socket, shutting off...\n");
+		close(communicate_fd);
+		close(listen_fd);
+
+	#endif
 
 	return 0;
 
