@@ -80,7 +80,7 @@ int main(int argc, char** argv)
 	}
 
 
-	bzero(&serv_addr, sizeof(serv_addr));			// clearing memory for declared server addy info structure
+	memset(&serv_addr, 0, sizeof(serv_addr));		// clearing memory for declared server addy info structure
 								// takes in the address of declared struct, and the size to clear
 								// it will place zero value bytes in the area pointed by the address 
 	serv_addr.sin_family = AF_INET;				// setting/populating up all the server address info
@@ -110,10 +110,10 @@ int main(int argc, char** argv)
 	// infinite loop for echo operation
 	while(1)
 	{
-		bzero(recv_str, 100);				// clearing out echo_str that was declared earlier, notice passing in
+		memset(recv_str, 0, sizeof(recv_str));		// clearing out echo_str that was declared earlier, notice passing in
 								// its name is = to its address, because its a char array, and all arrays
 								// are pointer themselves
-		bzero(send_str, 100);
+		memset(send_str, 0, sizeof(send_str));
 		read(communicate_fd, recv_str, 100);		// reading from a file descriptor, storing it in a string(char array)
 								// reading 100 bytes
 		if (strlen(recv_str) == 0)			// to check if client terminates, the recived string, or sent from client is 
