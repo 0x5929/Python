@@ -14,6 +14,7 @@
 	#define PREDEF_PLATFORM_MS 1				// now we are in a windows machine
 	#include <winsock2.h>					// including ms socket headers
 	#include <io.h>						// needed for ms read/write
+	#pragma comment(lib, "ws2_32.lib")			// telling linker to link winsock library
 #endif
 
 #include <stdio.h>						// crossed platform headers
@@ -36,13 +37,26 @@ int main(int argc, char** argv)
 	#endif
 
 	// initalizing variables
-	int MAX_CONN = 2;					// max connection allowed for this tcp socket server
+	int MAX_CONN = 1;					// max connection allowed for this tcp socket server
 	int yes = 1;						// used to reuse address in socket option
 	char send_str[100];					// string to send 
 	char recv_str[100];					// string recieved
 	int listen_fd, communicate_fd;				// file descriptors used for sockets
 	struct sockaddr_in serv_addr;				// struct to store socket server address info
 	
+	#if PREDEF_PLATFORM_MS == 1				// if we are in a microsoft windows host system
+		WASADATA wsa;					// its address needed for initalizing windows socket api (WSA)
+
+		if (WSAStartup(MAKEWORD(2,2), &wsa) != 0)	// initialzing wsa using wsastartup
+		{
+			printf("\n[!] Error: %d\n", WSAGetLastError());
+			printf("\n[!] Failed to initialize winsock api, shutting down...\n");
+			return 1;				// exiting
+		}else
+		{
+			printf("\n[!] Windows Socket API Initialized!\n");
+		}
+	#endif
 	listen_fd = socket(AF_INET, SOCK_STREAM, 0);		// socket method from socket.h returns a file descriptor	
 								// takes params, af_inet = ip fam, sock_stream = tcp type socket
 								// 0 for deafult protocol for the requets socket type
@@ -91,16 +105,23 @@ int main(int argc, char** argv)
 	// a pointer to a socketaddr struct of the particular client socket, which is NULL for any, 
 	// third parameter NULL for size of struct
 	communicate_fd = accept(listen_fd, (struct sockaddr*) NULL, NULL);
-	printf("\n[!] We have found a connection, getting ready to Echooo\n");
+	printf("\n[!] We have found a connection, getting ready to EcHoOoo\n");
 	
 	// infinite loop for echo operation
-	while(communicate_fd != -1){
+	while(1)
+	{
 		bzero(recv_str, 100);				// clearing out echo_str that was declared earlier, notice passing in
 								// its name is = to its address, because its a char array, and all arrays
 								// are pointer themselves
 		bzero(send_str, 100);
 		read(communicate_fd, recv_str, 100);		// reading from a file descriptor, storing it in a string(char array)
 								// reading 100 bytes
+		if (strlen(recv_str) == 0)			// to check if client terminates, the recived string, or sent from client is 
+		{						// emtpy, because the client disconnects and sent a termination of program
+			printf("\n[!] Client disconnected, shutting off...\n");
+			break;					// and recieved string will eventually get a one that is no length string
+		}						// while all other time its just waiting for client sender, now breaking out loop
+
 		printf("\n[!] Echoing back: %s\n", recv_str);	// printing info on our screen
 		
 		// this is where we have a BoF problem
@@ -112,6 +133,7 @@ int main(int argc, char** argv)
 		write(communicate_fd, send_str, strlen(send_str)+1);
 
 	}
+
 	return 0;
 
 
