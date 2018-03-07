@@ -207,7 +207,7 @@ void ECHO(int file_descriptor)						// the main function serve to echo out to cl
 	{
 		memset(recv_str, 0, sizeof(recv_str));			// clearing out echo_str that was declared earlier, notice passing in
 									// its name is = to its address, because its a char array, and all arrays
-//		memset(send_str, 0, sizeof(send_str));			// are pointer themselves
+		memset(send_str, 0, sizeof(send_str));			// are pointer themselves
 
 		#if PREDEF_PLATFORM_UNIX == 1
 	        	read(file_descriptor, recv_str, 1024);		// reading from a file descriptor, storing it in a string(char array)
