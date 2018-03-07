@@ -9,7 +9,7 @@ import sys              # needed for sys.exit
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-sock.connect(("192.168.1.86", 22000))
+sock.connect(("192.168.1.81", 22000))
 
 buf = "A" * 1000
 sock.send(buf)
