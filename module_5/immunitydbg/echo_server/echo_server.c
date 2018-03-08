@@ -22,7 +22,7 @@
 #include <stdlib.h>						// stardard lib, for exit()
 
 
-// forward function declaration 
+// forward function declaration
 void system_check();						// checking our operating system
 void ms_init();							// initalizing microsoft systems
 int try_listening();						// returns a file descriptor of socket upon success
@@ -30,7 +30,7 @@ void setting_opts(int fd);					// this will set all the options for the socket f
 void setting_serverInfo(struct sockaddr_in *server);		// this will do all the set up for socket server's network info
 int recv_connection(int server_fd);				// returns a file descriptor of new client socket upon success
 void ECHO(int file_descriptor);					// infinite loop echo serving client
-void vuln_func(char* recieved);					// BoF vulnerable function that uses strcpy from string.h
+char* vuln_func(char* recieved);				// BoF vulnerable function that uses strcpy from string.h
 void closing_procedures(int server_fd, int clientComm_fd);	// closes all sockets
 
 
@@ -44,13 +44,13 @@ int main(int argc, char** argv)
 	int MAX_CONN = 1;					// max connection allowed for this tcp socket server
 	int listen_fd, communicate_fd;				// file descriptors used for sockets
 	struct sockaddr_in serv_addr;				// struct to store socket server address info
-	
+
 	#if PREDEF_PLATFORM_MS == 1				// if we are in a microsoft windows host system
 		ms_init();
 	#endif
-	
+
 	listen_fd = try_listening();				// returns a file descriptor upon successful listen from socket
-	
+
 	setting_opts(listen_fd);				// we will set options for this socket fd in this function
 
 	setting_serverInfo((struct sockaddr_in*) &serv_addr);	// sets up the ip and port number to the declared struct serv_addr
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
 
 	printf("\n[!] We have sucessfully binded localhost IP, and listening on port 22000...\n");
 
-	communicate_fd = recv_connection(listen_fd);		// returns a file descriptor of the new socket connection	
+	communicate_fd = recv_connection(listen_fd);		// returns a file descriptor of the new socket connection
 
 	ECHO(communicate_fd);
 
@@ -81,7 +81,7 @@ int main(int argc, char** argv)
 
 void system_check()
 {
-	
+
 	// operating system platform check
 	#if PREDEF_PLATFORM_UNIX == 1
 		printf("\n[!] We are in an unix host\n");
@@ -97,7 +97,7 @@ void system_check()
 
 void ms_init()
 {
-#if PREDEF_PLATFORM_MS == 1	
+#if PREDEF_PLATFORM_MS == 1
 	WSADATA wsa;					// its address needed for initalizing windows socket api (WSA)
 
 	memset((WSADATA*) &wsa, 0, sizeof(wsa));	// clearing memory for the winsock api obj
@@ -135,25 +135,27 @@ int try_listening()
 
 void setting_opts(int fd)
 {
-	int yes = 1;						// yes for resuable address option
+	int yes = 1;										// yes for resuable address option
 
-	//setting the socket options at socket level, not protocol lvl, with resuseable address
-	// with also the address of the interger 1 for yes, lets us re use addressees, and the size of that 1
-	// which is different across different platforms
+	
 
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void*) &yes, sizeof(int)) == -1){
-		printf("\n[!] We couldn't set the socket option for reusable address");
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void*) &yes, sizeof(int)) == -1){	// setting the socket options at socket level
+												// not protocol lvl, with resuseable address
+	
+		printf("\n[!] We couldn't set the socket option for reusable address");		// with also the address of the interger 1
+	       											// for yes, lets us re use addressees, 
+												// and the size of that interger 
 		printf("\n[!] Exiting...");
 		exit(EXIT_FAILURE);
 	}
-	
+
 	printf("\n[!] Success in setting the resuable address to true\n");
 }
 
 
 void setting_serverInfo(struct sockaddr_in* server)		//  the address of a sockaddr_in struct struct is passed in
 {
-	
+
 	memset(server, 0, sizeof(*server));			// clearing memory for declared server addy info structure
 								// takes in the address of declared struct, and the size to clear
 								// it will place zero value bytes in the area pointed by the address
@@ -161,16 +163,14 @@ void setting_serverInfo(struct sockaddr_in* server)		//  the address of a sockad
 	server->sin_addr.s_addr = htons(INADDR_ANY);		// this script will allow any ip to connect
 								// htons used to make sure right formatting before going into the struct
 	server->sin_port = htons(22000);			// using port 22000, htons to ensure formatting
-}
+}								// notice the syntax using -> b/c 
+								// that how we reference a pointer to structure's key properties
 
 int recv_connection(int server_fd)
 {
 	int file_descriptor;
-//	int c;
-//        struct sockaddr_in client;      		// used for the address inside accept function
 	// accept is a blocking call, blocking execution until a connection is made,
 	// once made the accept method will return a new file descriptor for communication
-	// purpose with the client socket, and waits for another connection, until the max no. of connection
 	// takes in the socket file descriptor we are currently listening to,
 	// a pointer to a socketaddr struct of the particular client socket, which is NULL for any,
 	// third parameter NULL for size of struct
@@ -178,8 +178,6 @@ int recv_connection(int server_fd)
 	#if PREDEF_PLATFORM_UNIX == 1
         	file_descriptor = accept(server_fd, (struct sockaddr*) NULL, NULL);
 	#elif PREDEF_PLATFORM_MS == 1
-  //      	c = sizeof(struct sockaddr_in);
-//        	file_descriptor = accept(server_fd, (struct sockaddr*) &client, &c);
         	file_descriptor = accept(server_fd, (struct sockaddr*) NULL, NULL);
 	#endif
 
@@ -198,16 +196,17 @@ int recv_connection(int server_fd)
 
 void ECHO(int file_descriptor)						// the main function serve to echo out to clients
 {
-//	char* send_str;
+	char *send_str;							// declaring the pointer to the string recieved from vulnFunc
 	char recv_str[1024];						// variable declaration
-	
-	// infinite loop to echo serve clients	
+
+	// infinite loop to echo serve clients
 	while(1)
 
 	{
 		memset(recv_str, 0, sizeof(recv_str));			// clearing out echo_str that was declared earlier, notice passing in
-									// its name is = to its address, because its a char array, and all arrays
-//		memset(send_str, 0, sizeof(send_str));			// are pointer themselves
+        	send_str = (char*)calloc(101, sizeof(char));    	// calloc returns a pointer to the address of memory allocated and 
+									// cleared for specified size, and type
+
 
 		#if PREDEF_PLATFORM_UNIX == 1
 	        	read(file_descriptor, recv_str, 1024);		// reading from a file descriptor, storing it in a string(char array)
@@ -228,14 +227,15 @@ void ECHO(int file_descriptor)						// the main function serve to echo out to cl
 		printf("\n[!] Echoing back: %s\n", recv_str);		// printing info on our screen
 
 		// this is where we have a BoF problem
-		//send_str = vuln_func(recv_str);				// w/o limit test, memory buffer could over flow
-		vuln_func(recv_str);
+		send_str = vuln_func(recv_str);				// w/o limit test, memory buffer could over flow
+
 		// writing to the communicate file descriptor, writing it the send string
 		// also inputting the size fo the send string's length plus 1, for the null terminator?
+
 		#if PREDEF_PLATFORM_UNIX == 1
-            		write(file_descriptor, recv_str, strlen(recv_str)+1);
+            		write(file_descriptor, send_str, strlen(send_str)+1);
         	#elif PREDEF_PLATFORM_MS == 1
-            		send(file_descriptor, recv_str, strlen(recv_str)+1, 0);      	//using send for ms apps, and
+            		send(file_descriptor, send_str, strlen(send_str)+1, 0);      	//using send for ms apps, and
 											//the last params is for flag opt purposes,
 											//we put 0, bc ms doc sucks
 		#endif
@@ -245,20 +245,29 @@ void ECHO(int file_descriptor)						// the main function serve to echo out to cl
 }
 
 
-void vuln_func(char* recieved)
+char* vuln_func( char* recieved)
 {
-	char send[100];
- 	printf("\nBEFORE STRCPY\n");
+    char* sending_str = (char*)calloc(100, sizeof(char));				// allocating space for the char array pointer 
+    											// we will return to main function, 
+											// this will work b/c calloc uses heap memory 
+											// which will not die with function stack memory like send
+	char send[100];									// initalizing the buffer for str copy
+											// note it has to use stack memory to cause BoF
+	int i;										// declaring counter for loop
 	strcpy(send, recieved);
-	printf("\n1AFTER STRCPY\n");
-	//return (char*)sen;
+	for (i = 0; i < strlen(send); i++)						// for loop to populate return string with the send
+    {
+        sending_str[i] = send[i];
+    }
+
+	return sending_str;								// finally returning the heap allocated char arr/string
 }
 
 
 
 void closing_procedures(int server_fd, int clientComm_fd)
 {
-	
+
 	#if PREDEF_PLATFORM_MS == 1
 		printf("\n[!] Getting ready to shut down winsock api, and ms system\n");
 		printf("\n[!] Closing socket, shutting off...\n");
