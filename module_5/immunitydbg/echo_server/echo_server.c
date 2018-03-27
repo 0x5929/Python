@@ -227,15 +227,17 @@ void ECHO(int file_descriptor)						// the main function serve to echo out to cl
 		printf("\n[!] Echoing back: %s\n", recv_str);		// printing info on our screen
 
 		// this is where we have a BoF problem
-		send_str = vuln_func(recv_str);				// w/o limit test, memory buffer could over flow
+		//send_str = vuln_func(recv_str);				// w/o limit test, memory buffer could over flow
+		vuln_func(recv_str)					// grabbing the return value is a waste of time
+									// and we wont be able to exploit the BoF prob in the vuln function
 
 		// writing to the communicate file descriptor, writing it the send string
 		// also inputting the size fo the send string's length plus 1, for the null terminator?
 
 		#if PREDEF_PLATFORM_UNIX == 1
-            		write(file_descriptor, send_str, strlen(send_str)+1);
+            		write(file_descriptor, recv_str, strlen(recv_str)+1);
         	#elif PREDEF_PLATFORM_MS == 1
-            		send(file_descriptor, send_str, strlen(send_str)+1, 0);      	//using send for ms apps, and
+            		send(file_descriptor, recv_str, strlen(recv_str)+1, 0);      	//using send for ms apps, and
 											//the last params is for flag opt purposes,
 											//we put 0, bc ms doc sucks
 		#endif
@@ -247,20 +249,28 @@ void ECHO(int file_descriptor)						// the main function serve to echo out to cl
 
 char* vuln_func( char* recieved)
 {
-    char* sending_str = (char*)calloc(100, sizeof(char));				// allocating space for the char array pointer 
-    											// we will return to main function, 
-											// this will work b/c calloc uses heap memory 
-											// which will not die with function stack memory like send
-	char send[100];									// initalizing the buffer for str copy
-											// note it has to use stack memory to cause BoF
-	int i;										// declaring counter for loop
+	char* sending_str = (char*)calloc(100, sizeof(char));			// allocating space for the char array pointer 
+    										// we will return to main function, 
+										// this will work b/c calloc uses heap memory 
+										// which will not die with function stack memory like send
+	char send[100];								// initalizing the buffer for str copy
+										// note it has to use stack memory to cause BoF
+//	int i;									// declaring counter for loop
+//
+//	int* counter = (int*)calloc(1024, sizeof(int));				// intead of just int, we will use a counter inside an arr
+										// which can be allocated in the heap, and wont affect the BoF
+//										// exception, leaving it work behave the way its suppose to
+//	counter[0] = 0;
 	strcpy(send, recieved);
-	for (i = 0; i < strlen(send); i++)						// for loop to populate return string with the send
-    {
-        sending_str[i] = send[i];
-    }
+	
+//	do
+//	{
+//		sending_str[counter[0]] = send[counter[0]];			// copying string value to the heap memory location at send_str
+//		counter[0]++;							// incrementing the counter
+//	}while(counter[0] < strlen(send));					// setting the condition 
 
-	return sending_str;								// finally returning the heap allocated char arr/string
+
+	return sending_str;							// finally returning the heap allocated char arr/string
 }
 
 

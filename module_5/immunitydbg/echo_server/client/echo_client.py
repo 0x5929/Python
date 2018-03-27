@@ -11,7 +11,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 sock.connect(("192.168.1.86", 22000))
 
-buf = "A" * 1000
+buf = "A" * 300
 sock.send(buf)
 print sock.recv(1024)
 
