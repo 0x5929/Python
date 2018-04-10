@@ -44,13 +44,16 @@ def socket_setup((ip, port, size)):
     s.connect((ip, port))
     send_data = string_gen(size)
     s.send(send_data)
-    recv_data = s.recv(1024)    # 1kB of data can be received 
-    print "The tcp echo server said: %s" %recv_data 
     # making our program run infinitly until we hit ctrl-c
     try: 
+        recv_data = s.recv(1024)    # 1kB of data can be received 
+        print "The tcp echo server said: %s" %recv_data 
+        
         while 1:
             pass
     except KeyboardInterrupt:
+        print "\n[!] Closing Application..."
+        s.close()
         sys.exit(0)
 
 
@@ -62,4 +65,3 @@ def main((ip, port, size)):
 # script execution
 if __name__ == '__main__':
     main(arg_tuple)         # calls our main function
-    sys.exit(0)             # gracefully exits program

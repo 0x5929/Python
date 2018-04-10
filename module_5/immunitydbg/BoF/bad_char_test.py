@@ -46,14 +46,16 @@ def main(input_tuple):          # Input tuple has the following structure: (ip, 
     print "sending buffer: ", buf
     s.send(buf)
 
-    recv = s.recv(1024)
-    print "server says: ", recv
-    while 1:
-        pass
-
+    try:
+        recv = s.recv(1024)
+        print "server says: ", recv
+        
+        while 1:
+            pass
+    except KeyboardInterrupt:
+        print "\n[!] closing application"
+        s.close()
+        sys.exit(0)         # gracefully exits upon ctrl-c
 # script execution
 if __name__ == "__main__":
-    try:
-        main(user_input)        # calling main function
-    except KeyboardInterrupt: 
-        sys.exit(0)             # gracefully exits upon ctl-c
+    main(user_input)        # calling main function
