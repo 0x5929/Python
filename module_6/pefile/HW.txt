@@ -1,0 +1,10 @@
+A PROGRAM THAT TAKES TWO INPUTS
+
+	FIRST INPUT IS A DLL (EXECUTABLE LIB)
+	SECOND INPUT IS A PE
+
+the program will analyze the pe to see if the input dll was imported by the pe
+	if the input pe imports the input dll
+		print out a list of imports from the dll
+
+easy...
