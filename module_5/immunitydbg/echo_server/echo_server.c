@@ -228,7 +228,7 @@ void ECHO(int file_descriptor)						// the main function serve to echo out to cl
 
 		// this is where we have a BoF problem
 		//send_str = vuln_func(recv_str);				// w/o limit test, memory buffer could over flow
-		vuln_func(recv_str)					// grabbing the return value is a waste of time
+		vuln_func(recv_str);					// grabbing the return value is a waste of time
 									// and we wont be able to exploit the BoF prob in the vuln function
 
 		// writing to the communicate file descriptor, writing it the send string
