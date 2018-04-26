@@ -55,14 +55,16 @@ def crash_reporter():
 
 
 def usage():
-    print "  ##*************************************** HELP MENU *******************************************##\n"
-    print "  #################################################################################################"
-    print "  ### DESCRIPTION: analyzes a buffer overflow crash with a crash report ###########################"
-    print "  ##############  when loaded with the executable path  ###########################################"
-    print '  ### USAGE: python pydbg_memoryAccessViolation_crashReport.py [full path to exe] #################'
-    print "  ### EXAMPLE: python pydbg_memoryAccessViolation_crashReport.py c:\\Users\\kevin\\Desktop\\a.exe #"
-    print "  ########## REMEMBER: to put double backslashes in path like such \\ #############################"
-    print "\n  ##*********************************************************************************************##"
+    print "  ##*************************************** HELP MENU **************************************************##\n"
+    print "  ########################################################################################################"
+    print "  ### DESCRIPTION: analyzes a buffer overflow crash with a crash report ##################################"
+    print "  ##############  when loaded with the executable path  ##################################################"
+    print '  ### USAGE: python pydbg_memoryAccessViolation_crashReport.py [full path to exe] ########################'
+    print "  ### EXAMPLE: python pydbg_memoryAccessViolation_crashReport.py c:\\Users\\kevin\\Desktop\\a.exe ########"
+    print "  ########## REMEMBER: to put double backslashes in path so escape  ######################################"
+    print "  ########## FOR THIS PARTICULAR SYSTEM: I ran this in the same path as the utils module addon directory #"
+    print "  ########## path: c:\\Python27\\Libs\\paimei ############################################################"
+    print "\n  ##****************************************************************************************************##"
     print "[!] Exiting..."
 
 
