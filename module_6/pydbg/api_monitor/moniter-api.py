@@ -32,8 +32,10 @@ def send_bp(dbg):
 
     # now we can dump all the context at this moment using dump_context method
     # passing in what we want to dump, which is our context
-    print dbg.dump_context(dbg.context)
-    
+    print dbg.dump_context(dbg.context, stack_depth=10)
+
+#   read process memory takes  address, and bytes to read
+    print dbg.read_process_memory(dbg.context.Ebp + 0x08, 32)
     # we dont want to obstruct the program from doing anything, so lets just continue the program
     # after we are done with what we need at each breakpoint
 
