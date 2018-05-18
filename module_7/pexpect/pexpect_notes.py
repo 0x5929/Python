@@ -19,8 +19,7 @@ def main(argv):
     
     # repeat for the following steps
     pex.expect_exact('Password')
-    
-    pex.sendline([argv[1]])
+    pex.sendline(argv[1])
 
     pex.expect_exact('ftp')
 
