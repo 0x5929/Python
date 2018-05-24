@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-
 # importing modules
 import paramiko
 import sys
