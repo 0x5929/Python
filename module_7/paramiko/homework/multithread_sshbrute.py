@@ -356,9 +356,6 @@ def close_queue(queue):
 
     
     """
-    
-    print '[!] We found the matching pair!!'
-    print '[!] Closing up the rest of the jobs...'
 
     while queue.empty() is False:                       # checks queue if it is empty
         task = queue.get()                              # if not get each tasks
