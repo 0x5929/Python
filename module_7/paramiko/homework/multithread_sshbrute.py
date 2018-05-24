@@ -58,7 +58,7 @@ class BruteForce_Worker(threading.Thread):                                  # cu
             Args:
                 self (object): The self object, provides a way to refer to self attributes
                 ssh (object): The paramiko ssh instance
-                queue (object/list): A queue to be working with by this specific thread worker (FIFO)
+                queue (object): A queue to be working with by this specific thread worker (FIFO)
                 threadnumber (int): The identifying number of each thread
 
             Returns: 
