@@ -1,21 +1,16 @@
 #!/usr/bin/python
 
+import os
 
-class Add:
-    def __init__(self, a, b):
-        self.a = a
-        self.b = b
-    def add_number(self):
-        return self.a + self.b
+fd = os.open(__file__, os.O_RDWR)
 
+print 'file descriptor: ', fd
 
-def add(a, b):
-    
-    result = Add(a, b)
-    
-    print result.add_number()
+print 'closing file descriptor file'
+os.close(fd)
 
+print """
+        hello,
+        second line
 
-
-
-
+"""
