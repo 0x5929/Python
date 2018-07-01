@@ -46,18 +46,20 @@ class Helper:
         # sync nodes will take the most amount of nodes in network to be true
         # this can also be improved to have a security check, to ensure node integrity
         def consensus(self, peer_nodes):
-            current_server_nodes = peer_nodes
 
+            add_nodes = []
             for each_server_nodes in self._find_other_nodes(peer_nodes):        # this function call returns [[S1nodes], [S2nodes], ...]
 
                 for node in each_server_nodes:                                  # this makes sure we dont add our own ip address onto peer nodes
                     if node['host'] == self._resolve_host():
                         each_server_nodes.remove(node)
 
-                if len(current_server_nodes) < len(each_server_nodes):
-                    current_server_nodes = each_server_nodes
+                for node in each_server_nodes:                                  # second iteration to compare
+                    if not self._have_node(node, peer_nodes):
+                        add_nodes.append(node)
 
-            return self._update_nodes(peer_nodes, current_server_nodes)         # remember peer_nodes is the older version to be synced
+
+            return self._update_nodes(peer_nodes, add_nodes)                    # remember peer_nodes is the older version to be synced
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------    
         # called by nodes_consensus to extract peer node list from peer nodes
@@ -72,18 +74,28 @@ class Helper:
 
             return all_nodes_on_each_network
 
+
+#------------------------------------------------------------------------------------------------------------------------------------------------- 
+        def _have_node(node, nodes):
+            for n in nodes:
+                host = node['host'] + ':' + node['port']
+                if host == n:                                                   # meaning I already have this node
+
+                    return True
+
+            return False
+
 #------------------------------------------------------------------------------------------------------------------------------------------------
         
         # called by nodes_consensus to updated current node's back to the calling server 
-        def _update_nodes(self, peer_nodes, to_be_updated_nodes):
-            if len(to_be_updated_nodes) <= len(peer_nodes):
-                return peer_nodes
-            else:
-                ret = []                                                                # converted back to host:port format for server
-                for node in to_be_updated_nodes:
-                    ret.append(node['host'] + ':' + node['port'])
-                
-                return ret
+        def _update_nodes(self, peer_nodes, to_be_added_nodes):
+
+            for node in to_be_added_nodes:
+                host = node['host'] + ':' + node['port']                            # converted back to host:port format for calling server
+                peer_nodes.append(host)
+            
+            return peer_nodes
+
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
