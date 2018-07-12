@@ -18,27 +18,42 @@ class Block:
         handler class that is responsible for creating a block
     
     """
+    initialized_data = {
+                "proof-of-work": None,
+                "transactions": None
+                }
+
+
     @classmethod
     def create_genesis_block(cls):
-        return cls(0, datetime.datetime.now(), "Genesis Block, Welcome back Mamba", "0")
+
+        return cls(0, datetime.datetime.now(), cls.initialized_data, prev_hash="0")
     
+    #NOTE: this method is only used for testing purposes, and creating dummy next blocks
+    #      the node server will never implement this method, but rather create a Block instance with the correct data/transactions when mining
     @classmethod
     def create_next_block(cls, last_block):
         this_index = last_block.index + 1
         this_timestamp = datetime.datetime.now()
-        this_data = "Hello world mamba coin, I am block " + str(this_index)
+        this_data = cls.initialized_data
         this_prevHash = last_block.hash
 
-        return cls(this_index, this_timestamp, this_data, this_prevHash)
+        return cls(this_index, this_timestamp, this_data, prev_hash=this_prevHash)
 
-    def __init__(self, index, timestamp, data, prev_hash):
-        self.index = index
-        self.timestamp = timestamp
-        self.data = data
+    def __init__(self, index, timestamp, data, prev_hash=None, current_hash=None):
+        self.index = int(index)
+        self.timestamp = str(timestamp)
+        self.data = dict(data)                      # improvements: need to enforce type checker
         self.prev_hash = prev_hash
-        self.hash = self.hash_me()
+        self.current_hash = current_hash
+        
+        # added feature
+        if current_hash is not None:
+            self.hash = current_hash
+        else:
+            self.hash = self._hash_me()
 
-    def hash_me(self):
+    def _hash_me(self):
         sha = hashlib.sha256()                  # creating our hash object
 
         sha.update(str(self.index) +            # updating the hash object of concatenated string of all the data in the block 

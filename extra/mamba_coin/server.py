@@ -13,7 +13,7 @@
             4. SYNC BLOCKS BY CALLING /sync_blocks GET api
             5. SYNC TRANSACTIONS BY CALLING /sync_trans GET api
             6. POST ANY TRANSACTIONS BY CALLING /submit_transactions POST api
-            7. MINE BY CALLING /mine GET api
+*           7. MINE BY CALLING /mine GET api
 
 
 """
@@ -39,13 +39,24 @@ from flask import Flask                                                 # for ou
 from flask import request                                               # for http server's request module
 from resources import Block                                             # for blockchain class operations
 from resources import Helper                                            # for helper class operations
+import sys                                                              # for system program implementation
 import json                                                             # for json loading and dumping
-import datetime as date                                                 # for time operations
+import datetime                                                         # for time operations
 import requests                                                         # for http request operations
 
 ##################################################################################################################################################
 
 class Server:
+    """
+        superClass: None
+
+        class respnsible for running a server 
+        at each node of the network
+        interacts with Helper and Block class internally
+        but also interacts with user externally
+        
+
+    """
 
 #==================================================== CLASS VARIABLES ===========================================================================
 
@@ -64,18 +75,53 @@ class Server:
 
 #=================================================== INSTANCE METHODS ============================================================================
 
-    
+
+    def _usage(self):
+        print "\n\n"
+        
+        print """
+        
+        [+] Welcome to Mambacoin network server node
+        
+        [+] Current time is: %s 
+        [+] External program dependencies: cURL 
+
+            $ curl "host:port/add_peer/?host=<host>&port=<port>"        ---- Add peer node to node list
+            $ curl "host:port/sync_nodes"                               ---- Sync node list
+            $ curl "host:port/sync_blocks"                              ---- Sync blockchain list
+            $ curl "host:port/sync_trans"                               ---- Sync transaction list 
+            $ curl "host:port/submit_transactions" \\                   ---- Post transactions to node
+                    -H "application/json"          \\
+                    -d "{"timestamp":<transaction timestamp>,\\
+                         "from"     : <transaction from address>, \\
+                         "to"       : <transaction to address>, \\
+                         "amount"   : <transaction ammount>}"
+            $ curl "host:port/mine"                                     ---- Mine mamba coin and solidify all transactions since last mine
+
+        
+        [+] This project is derived from snakecoin: https://medium.com/crypto-currently/lets-build-the-tiniest-blockchain-e70965a248b
+        
+        """ %str(datetime.datetime.now())
+
+        print "\n\n"
+
+#++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # transaction related handlers and methods
 
     def _check_trans(self, transaction):
         """
+            param1 obj: self object
+            param2 dict: a transaction dictionary to be checked
+
+            return bool: whether or not this node's transaction list contains the transactions
+
             This is an internal private api called by
             this node's submit_transaction_handler method
         
         """
 
         for t in Server.this_node_transactions:                     # iterating through current list of transactions 
-            if json.loads(transaction) == json.loads(t):            # if input new trans is the same as any of our list, return false
+            if json.dumps(transaction) == json.dumps(t):            # if input new trans is the same as any of our list, return false
                 return False
 
         return True                                                 # if not, return true
@@ -84,36 +130,47 @@ class Server:
 
     def submit_transaction_handler(self):
         """
+            param1 obj: self object
+            return sideeffect: handler listens to POST request of /submit_transaction api
+            
             This is an external api called by
-            any client to post transcations
+            any user to post transcations
             
             Also this is an internal api called by
             peer nodes whenever a transaction is posted there
         
         """
 
-        if request.method == 'POST':                                                    # make sure we are only handling post requests
-            new_trans = request.get_json()                                              # extracting the transaction data    
+        if request.method == 'POST':                                                    # make sure only handle post requests
+            new_trans = json.loads(request.get_json())                                  # extracting the transaction data    
             
-            if self._check_trans(new_trans):                                            # making sure our transactions are actually new
-                for peer in Server.peer_nodes:
-                    requests.post("http://{}/submit_transaction", json=new_trans)       # broadcast to other nodes
-            
-                Server.this_node_transactions.append(new_trans)                         # adding new transactions to our node's list
+            if self._check_trans(new_trans) == True:                                    # making sure transactions are actually new
+
+                # added feature as per bitcoin white paper
+                try:
+                    for peer in Server.peer_nodes:
+                        requests.post("http://{}/submit_transaction", json=new_trans)   # broadcast to other nodes
+                except:
+                    pass
+
+                Server.this_node_transactions.append(new_trans)                         # adding new transactions to this node's list
     
                 # standard output our transaction
                 print "=================================================="
                 print "**New Transaction**"
                 print "From: {}".format(new_trans['from'])
                 print "To: {}".format(new_trans['to'])
-                print "Amount: {}".format(new_trans['amount'])                          # usage of format instead of formatters like %s in C
+                print "Amount: {}".format(new_trans['amount'])                          
     
-                return "Transaction submission successful\n"                            # response to client
+                return "Transaction submission successful\n"                            # response through server
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 
     def clear_trans_handler(self):
         """
+            param1 obj: self object
+            return sideeffect: handler listens to DELETE request of /clear_trans api
+
             This is an internal api called by
             peer  node's mining functionality to clear 
             this node's transactions after a block is mined with all transactions
@@ -130,28 +187,35 @@ class Server:
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 
-    def sync_trans_handler(self):                                               # called by any client to sync current node's transactions 
+    def sync_trans_handler(self):                                               
         """
+            param1 obj: self object
+            return sideeffect: handler listens to GET request of /sync_trans api
+
             This is an external api called by 
-            any client to sync this node's transactions with others
+            any user to sync this node's transactions with others
         
         """
 
+        # trans_helper.consensus will update transaction list according to its policies (rn its the longest, could be improved)
         Server.this_node_transactions[:] = Server.trans_helper.consensus(Server.this_node_transactions, Server.peer_nodes)
 
-        return "[+] Transactions synced: {}".format(str(Server.this_node_transactions))
+        return "\n[+] Transactions synced: {}".format(str(Server.this_node_transactions))
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 
     def get_trans_handler(self):                            
         """
+            param1 obj: self object
+            return sideeffect: handler listens to GET request of /sync_trans api
+
             This is an internal api called by
             peer nodes to extract this node's 
             transactions for syncing purposes
         
         """
-
-        return json.dumps(Server.this_node_transactions)
+        # return json format of this node's transaction list
+        return json.dumps(Server.this_node_transactions)                    
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -159,19 +223,26 @@ class Server:
 
     def sync_blocks_handler(self):  
         """
+            param1 obj: self object
+            return sideeffect: handler listens to GET request of /sync_blocks api
+            
             This is an external api called by 
-            any client to sync this node's block
+            any user to sync this node's block
         
         """
         
+        # block_helper.consensus will update the blockchain list according to its policies (rn its longest as well)
         Server.blockchain[:] = Server.block_helper.consensus(Server.blockchain, Server.peer_nodes)
         
-        return "[+] Blocks synced: {}".format(str(Server.blockchain))
+        return "\n[+] Blocks synced: {}".format(str(Server.blockchain))
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 
     def get_blocks_handler(self):  
         """
+            param1 obj: self object
+            return sideeffect: handler listens to GET request of /get_blocks api
+
             This is an internal api called by 
             peer nodes to extract this node's 
             blockchain list for syncing purposes
@@ -180,16 +251,16 @@ class Server:
 
         blocks = []
         
-        for block in Server.blockchain:                                         # remeber our block is in block object format
+        for block in Server.blockchain:                                         # remember block is in block object format
             blocks.append({
-                    "index"    : str(block.index),
+                    "index"    : block.index,                                   # block.index is int 
                     "timestamp": str(block.timestamp),
-                    "data"     : str(block.data),                               # data is also in json format
-                    "hash"     : block.hash
+                    "data"     : block.data,                                    # block.data is in dict format
+                    "hash"     : str(block.hash)
                 })
 
 
-        return json.dumps(blocks)                                               # so we need to return json format through the server
+        return json.dumps(blocks)                                               # return json format through the server
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -197,20 +268,29 @@ class Server:
 
     def sync_nodes_handler(self):   
         """
+            param1 obj: self object
+            return sideeffect: handler listens to GET request of /sync_nodes api
+
             This is an external api called by 
-            any clients to sync this node's 
+            any user to sync this node's 
             peer node list
         
         """
 
+        # node_helper.consensus updates the peer nodes list according to its policies 
+        # (every possible node's address is checked and added if need)
+        # since nodes are added alot less than blocks and transactions, we can afford to do this for now.
         Server.peer_nodes[:] = Server.node_helper.consensus(Server.peer_nodes)
 
-        return "[+] Nodes synced: {}".format(str(Server.peer_nodes))
+        return "\n[+] Nodes synced: {}".format(str(Server.peer_nodes))
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 
     def get_nodes_handler(self):
         """
+            param1 obj: self object
+            return sideeffect: handler listens to GET request of /get_nodes api
+
             This is an interal api called by
             peer nodes to extract this node's 
             peer nodes list for syncing purposes
@@ -218,7 +298,7 @@ class Server:
         """
         nodes = []
 
-        for n in Server.peer_nodes:                                 # converting into json object to be sent via http requests
+        for n in Server.peer_nodes:                                 # converting into json objects to be sent via http requests
             host = n.split(':')[0]
             port = n.split(':')[1]
             node = {
@@ -228,140 +308,181 @@ class Server:
             
             nodes.append(node)
 
-        return json.dumps(nodes)                                    # after syncing everyting, convert synced nodes to json and send to client
+        return json.dumps(nodes)                                    # after syncing everyting, convert synced nodes to json and send thru server 
 
 #------------------------------------------------------------------------------------------------------------------------------------------------
 
     def add_peer_handler(self):
         """
+            param1 obj: self object
+            return sideeffect: handler listens to GET request of /add_peer api
+
             This is an external api called by
-            any client to add a host node onto this 
+            any user to add a host node onto this 
             particular node's peer node list
         
         """
-        host = request.args['host'] if 'host' in request.args else 'localhost'  # args is a dict of key value pairs of the url query, after ?
-        port = request.args['port']                                             # url format: http://192.168.1.249:5000/?host=192.168.1.10&port=50
-        peer = host + ':' + port
-        Server.peer_nodes.append(peer)
         
-        output = '[+] peer added: {}'.format(peer)
-        
-        print output                                                            # output to server
+        # args is a dict of key value pairs of the url query, after ?
+        # url format: http://192.168.1.249:5000/add_peer/?host=192.168.1.10&port=50
 
-        return output                                                           # response to client
+        if request.method == "GET":
+            host = request.args['host'] if 'host' in request.args else 'localhost'
+                                                                               
+            port = request.args['port']                                         
+            peer = host + ':' + port
+            Server.peer_nodes.append(peer)
+        
+        
+        return '\n[+] peer added: {}'.format(peer)                              # response thru server
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
     # mining handler and method
 
     def mine_handler(self):
+        """
+            param1 obj: self object
+            return sideeffect: handler listens to GET request of /mine api
+
+            This is an external api called by 
+            any user to mine a mamba coin 
+            (Kobe's face in front, coin value in back)
+            and lock in all transactions since the last mined coin, 
+            add the mine coin with new proof of work with the locked in
+            transactions, unto to the network blockchain list
+        
+        """
 
         # before mining, sync nodes, blocks, and transactions
-        Server.peer_nodes = Server.node_helper.consensus(Server.peer_nodes)             
-        Server.blockchain = Server.block_helper.consensus(Server.blockchain, Server.peer_nodes)   
-        Server.this_node_transactions = Server.trans_helper.consensus(Server.this_node_transactions, Server.peer_nodes) 
+        Server.peer_nodes[:] = Server.node_helper.consensus(Server.peer_nodes)             
+        Server.blockchain[:] = Server.block_helper.consensus(Server.blockchain, Server.peer_nodes)   
+        Server.this_node_transactions[:] = Server.trans_helper.consensus(Server.this_node_transactions, Server.peer_nodes) 
 
-        last_block = Server.blockchain[len(Server.blockchain) - 1]                      # start mining
-        last_proof = last_block.data['proof-of-work']
-        proof = Server.helper.proof_of_work(last_proof)                                 # grabbing proof of work
-
-        miner_transaction = {                                                           # adding miner transactions
-                "timestamp": str(datetime.datetime.now())
+        # after the first sync, lets see if a genesis block is present
+        if len(Server.blockchain) == 0:
+            Server.blockchain.append(Block.create_genesis_block())              # if not, create genesis block to start chain for network
+    
+        # start mining
+        last_block = Server.blockchain[len(Server.blockchain) - 1]              # grabbing the last block 
+        last_proof = last_block.data['proof-of-work']                           # grabbing the proof of work from the last block
+        proof = Server.helper.proof_of_work(last_proof)                         # generating a new proof from the last one                            
+        miner_transaction = {                                                   # adding miner transactions
+                "timestamp": str(datetime.datetime.now()),
                 "from"     : "network",
-                "to"       : Server.miner_address
+                "to"       : Server.miner_address,
                 "amount"   : 1
             }
 
-        Server.this_node_transactions.append(miner_transaction)                         
+        Server.this_node_transactions.append(miner_transaction)                 # append the new transaction to the transaction list
 
-        data = {
-                "proof-of-work": proof,
-                "transactions: " list(Server.this_node_transactions)
+        data = {                                                                # the data property of a mamba coin
+                "proof-of-work" : proof,
+                "transactions" : list(Server.this_node_transactions)
             }
 
+        block = Block(last_block.index + 1, datetime.datetime.now(), data, prev_hash=last_block.hash) 
+        Server.blockchain.append(block)                                                 # adding block to chain
 
-        for peer in Server.peer_nodes:                                                  # empty transactions 
-            requests.delete("http://{}/clear_trans".format(peer))                       # clear_trans api will also check for any unaccounted
-                                                                                        # transactions in other node's so they are not deleted
+        # clean up
+        for peer in Server.peer_nodes:                                                  # empty the accounted transactions 
+            try: 
+                requests.delete("http://{}/clear_trans".format(peer))                   # clear_trans api will check for any unaccounted 
+            except:                                                                     # transactions in other node's so they are not deleted
+                pass
+                                                                                        
         Server.this_node_transactions[:] = []                                           # clear this node's transactions 
         
                                                                                         # resyncing to account for any slight discrepancies 
                                                                                         # that may happen between last sync and mining procedure
-        Server.peer_nodes = Server.node_helper.consensus(Server.peer_nodes)             # resync peer_nodes, and blocks
-        Server.blockchain = Server.block_helper.consensus(Server.blockchain, Server.peer_nodes)              
+        Server.peer_nodes[:] = Server.node_helper.consensus(Server.peer_nodes)          # resync peer_nodes, and blocks, and trans
+        Server.blockchain[:] = Server.block_helper.consensus(Server.blockchain, Server.peer_nodes)# becareful with this sync
+        Server.this_node_transactions[:] = Server.trans_helper.consensus(Server.this_node_transactions, Server.peer_nodes) 
 
-        block = Block(last_block.index + 1, date.datetime.now(), data, last_block.hash) # creating block
-                
-        Server.blockchain.append(block)                                                 # finally adding block to chain
 
-        return json.dumps({                                                             # response to client
-                "index": index,
-                "timestamp": str(timestamp),
-                "data": data, 
-                "hash": block.hash
+        return json.dumps({                                                             # response thru server
+                "index": block.index,
+                "timestamp": str(block.timestamp),
+                "data": block.data, 
+                "hash": str(block.hash)
             }) + "\n"
     
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
-    # server initializing/setup routing code
-    #NOTE: we could also add another level of abstraction for node/block/transaction handlers as the project gets more complex
-    # would be initialized and passed in from script execution
 
-    def start(self):
-    
-        # using flask's routing decorator
-        # the function will return the response for the appropriate url routing
-        # and handle this url routing appropriatly
-    
-        # once this is called, it will use the same data and post to all nodes
-        @Server.node.route('/submit_transaction', methods=['POST'])
-        self.submit_transaction_handler 
-    
-        # once this is called, it will call /get_transactions to retrieve all transactions from peers and consensus the best one to be updated
-        @Server.node.route('/sync_trans', methods=['GET'])
-        self.sync_trans_handler
-
-        # this is called by /sync_trans api 
-        @Server.node.route('/get_trans', methods=['GET'])
-        self.get_trans_handler
-    
-        # once this is called, it will call /get_blocks to retreive all blocks from all peers and consensus the best one to be updated
-        @Server.node.route('/sync_blocks', methods=['GET'])
-        self.sync_blocks_handler
-
-        # this is called by /sync_blocks rest api
-        @Server.node.route('/get_blocks', methods=['GET'])
-        self.blocks_handler
-    
-        # once this is called it will call /get_nodes to retrieve all nodes from peers and consensus the best one to be updated
-        @Server.node.route('/sync_nodes', methods=['GET'])
-        self.sync_nodes_handler
-
-        # this is called by /sync_nodes
-        @Server.node.route('/get_nodes', methods=['GET'])
-        self.nodes_handler
-
-        # once this is called it will add a host and port to this server's nodes list
-        @Server.node.route('/add_peer', methods=['GET'])
-        self.add_peer_handler
-    
-        # once this is called it will mine a coin using proof of work, and clear transactions of this server
-        # and call /clear_trans to all other nodes to clear other transactions as well
-        # NOTE: all transactions are broadcasted to all nodes. 
-        @Server.node.route('/mine', methods=['GET'])
-        self.mine_handler
+    def start(self, port=None):
+        """
+        param1 obj: self object
+        param2 str: port number default to 5000
+        return sideeffect: server initializes/setup routing code
         
-        # this is called by /mine api to clear all transactions across network
-        @Server.node.route('/clear_trans', methods=['DELETE'])
-        self.clear_trans_handler
+        using flask's routing decorator to route, 
+        the decorated function will return the response for the appropriate url routing
+        and handle this url routing appropriatly
 
-        # making sure our webserver will be running, standard port is 5000
-        Server.node.run()
+        """
+        # once called, it will use the same data and post to all nodes
+        @Server.node.route('/submit_transaction', methods=['POST'])
+        def submit_transaction(): return self.submit_transaction_handler() 
+
+        # once called, it will call /get_trans to retrieve all transactions from peers and consensus the best one to be updated
+        @Server.node.route('/sync_trans', methods=['GET'])
+        def sync_trans(): return self.sync_trans_handler()
+
+        # called by /sync_trans api 
+        @Server.node.route('/get_trans', methods=['GET'])
+        def get_trans(): return self.get_trans_handler()
+    
+        # once called, it will call /get_blocks to retreive all blocks from all peers and consensus the best one to be updated
+        @Server.node.route('/sync_blocks', methods=['GET'])
+        def sync_blocks(): return self.sync_blocks_handler()
+
+        # called by /sync_blocks rest api
+        @Server.node.route('/get_blocks', methods=['GET'])
+        def get_blocks(): return self.blocks_handler()
+    
+        # once called it will call /get_nodes to retrieve all nodes from peers and consensus the best one to be updated
+        @Server.node.route('/sync_nodes', methods=['GET'])
+        def sync_nodes(): return self.sync_nodes_handler()
+
+        # called by /sync_nodes
+        @Server.node.route('/get_nodes', methods=['GET'])
+        def get_nodes(): return self.nodes_handler()
+
+        # once called it will add a host and port to this server's nodes list
+        @Server.node.route('/add_peer', methods=['GET'])
+        def add_peer(): return self.add_peer_handler()
+    
+        # once called it will mine a coin using proof of work, and clear transactions of this server, 
+        # call /clear_trans to all other nodes to clear/delete accounted transactions
+        @Server.node.route('/mine', methods=['GET'])
+        def mine(): return self.mine_handler()
+        
+        # called by /mine api to clear all transactions across network
+        @Server.node.route('/clear_trans', methods=['DELETE'])
+        def clear_trans(): return self.clear_trans_handler()
+
+        # making sure webserver will be running eternally, standard port is 5000
+        try:
+            Server.node.run(port=port)
+        except:
+            print "\n[!] Server had trouble starting at port {}".format(port)
+            print "[!] Exiting..."
+            sys.exit(1)
     
 ##################################################################################################################################################
 
 # script execution
 
 if __name__ == "__main__":
-    server = Server()               # initializing server
-    server.start()                  # starting server
+    try:
+        server = Server()                        # initializing server
+        server._usage()                          # displaying usage details
+        if len(sys.argv) > 1:
+            port = sys.argv[1] 
+            server.start(port=port)              # starting server
+        else:
+            server.start()
+    except KeyboardInterrupt:
+        print "[!] Requested shutdown, exiting..."
+        sys.exit(0)
