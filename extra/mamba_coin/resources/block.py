@@ -31,6 +31,7 @@ class Block:
     
     #NOTE: this method is only used for testing purposes, and creating dummy next blocks
     #      the node server will never implement this method, but rather create a Block instance with the correct data/transactions when mining
+    #      should probably hide it with _
     @classmethod
     def create_next_block(cls, last_block):
         this_index = last_block.index + 1
@@ -63,6 +64,8 @@ class Block:
 
         return sha.hexdigest()
 
+    def __getitem__(self, key):                # so we can access block['attr']
+            return getattr(self, key)
 
 
 

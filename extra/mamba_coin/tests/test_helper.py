@@ -36,6 +36,7 @@ class Test_helper(unittest.TestCase):
     def test_helper_proofOfWork(self):
         self.assertEqual(self.helper.proof_of_work(None), 9)
         self.assertEqual(self.helper.proof_of_work(9), 18)
+        self.assertEqual(self.helper.proof_of_work(18), 36)
 
     def test_node_resolveHost(self):
         self.assertEqual(self.node_helper._resolve_host(), "192.168.1.249")
@@ -119,6 +120,35 @@ class Test_helper(unittest.TestCase):
         self.assertEqual(self.node_helper._update_nodes(my_peer_nodes, to_be_added_nodes), ret_new_peer_nodes)
         self.assertEqual(self.node_helper._update_nodes([], to_be_added_nodes), ["192.168.1.88:5000"])
 
+    
+    def test_block_createGenBlock(self):
+        with patch("resources.block.datetime") as mock_datetime:
+            # test data
+            mock_datetime.datetime.now.return_value = "NOW"
+            expected_result = Block.create_genesis_block()
+
+            test_result = self.block_helper.create_gen_block()
+
+            # test
+            boo_true = Test_compare.comp_list_of_block_obj([test_result], [expected_result])
+            self.assertTrue(boo_true)
+
+    def test_block_createBlock(self):
+        with patch("resources.block.datetime") as mock_datetime:
+            # test data
+            mock_datetime.datetime.now.return_value = "NOW"
+            genesis_block = Block.create_genesis_block()
+
+            expected_result = Block(genesis_block.index + 1, "NOW", genesis_block.data, prev_hash=genesis_block.hash)
+
+            # test
+            test_result = self.block_helper.create_block(genesis_block.index + 1, "NOW", genesis_block.data, genesis_block.hash)
+
+            boo_true = Test_compare.comp_list_of_block_obj([test_result], [expected_result])
+            self.assertTrue(boo_true)
+
+
+    # below test needs to be reconsidered
     def test_block_consensus(self):
         test_peer_nodes = ['192.168.1.86:5000', '192.168.1.87:5000']
         ret = []
@@ -161,6 +191,59 @@ class Test_helper(unittest.TestCase):
 
         ret_chain = [genesis_block, second_block, third_block]                                  # expended returned chain output from consensus
 
+        
+        # need to create test data for when two coins are mined almost simoutaneously, in which case, we take the earlier stamped coin
+        time_early = datetime.datetime.now()
+        time_late = datetime.datetime.now()
+
+        
+        trans_network = {
+                "timestamp": "NOW",
+                "from": "network",
+                "to": "random",
+                "amount": 1
+        }
+        trans_no_network = {
+                "timestamp": "NOW",
+                "from": "random",
+                "to": "random",
+                "amount": 1
+        }
+        data_mine = {
+                "proof-of-work": 36,
+                "transactions": [trans_network]
+        }
+        data_not_mine = {
+                "proof-of-work": 36,
+                "transactions": [trans_no_network]
+        }
+        data_no_trans = {
+                "proof-of-work": None,
+                "transactions": None
+        }
+
+        # testing blocks
+        block_early = {
+                "index": 1,
+                "timestamp": time_early,
+                "data": dict(data_mine),
+                "hash": "random-hash-bc-it-doesnt-matter-for-this-test"
+
+        } 
+        block_late = {
+                "index": 1,
+                "timestamp": time_late,
+                "data": dict(data_mine),
+                "hash": "random-hash-bc-it-doesnt-matter-for-this-test"
+
+        } 
+
+        block_early_obj = Block(block_early['index'], block_early['timestamp'], block_early['data'], current_hash=block_late['hash'])
+
+        ret2 = [[genesis_block_dict, block_early]]
+
+
+        # tests for when my chain is either shorter or longer than peer's, in which we return the longest
         with patch('resources.helper.Helper.Blockchain_helper._find_other_chains') as mock_find_other_chains:
 
             mock_find_other_chains.return_value = ret
@@ -171,8 +254,86 @@ class Test_helper(unittest.TestCase):
             self.assertTrue(Test_compare.comp_list_of_block_obj( \
                     self.block_helper.consensus([genesis_block, second_block, third_block], test_peer_nodes), \
                     ret_chain))
-            
 
+        # tests when my chain is the same length, in which we take the earlier one, if both last blocks are mine blocks
+        with patch('resources.helper.Helper.Blockchain_helper._find_other_chains') as mock_find_other_chains:
+            mock_find_other_chains.return_value = ret2
+            
+            test_result = self.block_helper.consensus([genesis_block, block_late], test_peer_nodes)
+            expected_result = [genesis_block, block_early_obj]
+
+            boo_true = Test_compare.comp_list_of_block_obj(test_result, expected_result)
+            
+            self.assertTrue(boo_true)
+
+    def test_block_compareLast(self):
+        # test data
+        time_early = str(datetime.datetime.now())
+        time_late = str(datetime.datetime.now())
+
+        
+        trans_network = {
+                "timestamp": "NOW",
+                "from": "network",
+                "to": "random",
+                "amount": 1
+        }
+        trans_no_network = {
+                "timestamp": "NOW",
+                "from": "random",
+                "to": "random",
+                "amount": 1
+        }
+        data_mine = {
+                "proof-of-work": 36,
+                "transactions": [trans_network]
+        }
+        data_not_mine = {
+                "proof-of-work": 36,
+                "transactions": [trans_no_network]
+        }
+        data_no_trans = {
+                "proof-of-work": None,
+                "transactions": None
+        }
+
+        # testing blocks
+        block_early = {
+                "index": 1,
+                "timestamp": time_early,
+                "data": dict(data_mine),
+                "hash": "random-hash-bc-it-doesnt-matter-for-this-test"
+
+        } 
+        block_late = {
+                "index": 1,
+                "timestamp": time_late,
+                "data": dict(data_mine),
+                "hash": "random-hash-bc-it-doesnt-matter-for-this-test"
+
+        } 
+        block_no_trans = {
+                "index": 1,
+                "timestamp": time_late,
+                "data": dict(data_no_trans),
+                "hash": "random-hash-bc-it-doesnt-matter-for-this-test"
+
+        } 
+        block_no_network = {
+                "index": 1,
+                "timestamp": time_late,
+                "data": dict(data_not_mine),
+                "hash": "random-hash-bc-it-doesnt-matter-for-this-test"
+
+        } 
+        
+        # tests
+        self.assertFalse(self.block_helper._compare_last([block_no_trans], [block_late]))
+        self.assertFalse(self.block_helper._compare_last([block_late], [block_no_trans]))
+        self.assertFalse(self.block_helper._compare_last([block_no_network], [block_late]))
+        self.assertFalse(self.block_helper._compare_last([block_late], [block_no_network]))
+        self.assertFalse(self.block_helper._compare_last([block_early], [block_late]))
+        self.assertTrue(self.block_helper._compare_last([block_late], [block_early]))
 
     def test_block_findOtherChains(self):
 
@@ -215,6 +376,7 @@ class Test_helper(unittest.TestCase):
             mock_get.return_value.content = test_get_ret_chain
 
             self.assertEqual(self.block_helper._find_other_chains(test_peer_nodes), chains)
+
 
     def test_block_updateBlockchain(self):
         nodeA_chains = []                                   # has two blocks
@@ -265,6 +427,9 @@ class Test_helper(unittest.TestCase):
                 self.block_helper._update_blockchain(test2_my_block, test2_peer_block), \
                 ret_chain))
 
+        self.assertTrue(Test_compare.comp_list_of_block_obj( \
+                self.block_helper._update_blockchain(test_peer_block, test_my_block, auto_update=True), \
+                test_my_block))
 
     def test_trans_consensus(self):
         test_trans1 = {
@@ -334,6 +499,7 @@ class Test_helper(unittest.TestCase):
         self.assertEqual(self.transhelper._update_transactions(nodeA_trans, nodeB_trans), nodeA_trans)
     
     def test_trans_ensure(self):
+        # test data
         test_trans1 = {
                 "timestamp": str(datetime.datetime.now()), 
                 "from": "asdf-random-public-key-asdf", 
@@ -358,52 +524,13 @@ class Test_helper(unittest.TestCase):
                 "to": ",mnkjhyuioyuio-random-public-key-azxcvz", 
                 "amount": 5}
 
-        nodeA_trans = [test_trans1, test_trans2, test_trans3]
-        nodeB_trans = [test_trans1, test_trans2]
-        nodeC_trans = [test_trans1, test_trans2, test_trans3, test_trans4]                                # my node
-        nodeD_trans = [test_trans1, test_trans2, test_trans3]
+        current_trans = [test_trans1, test_trans2]
+        delete_trans = [test_trans2, test_trans3, test_trans4]
 
-        test_mock_ret = [nodeA_trans, nodeB_trans]
-        with patch("resources.helper.Helper.Transaction_helper._find_other_transactions") as mock_method:
-            mock_method.return_value = test_mock_ret
+        # tests
+        self.assertEqual(self.transhelper.ensure(current_trans, delete_trans), [test_trans1])
+        self.assertEqual(self.transhelper.ensure(current_trans, [test_trans1, test_trans2, test_trans3, test_trans4]), [])
 
-            self.assertEqual(self.transhelper.ensure(nodeC_trans, self.peer_nodes), [test_trans4])
-            self.assertEqual(self.transhelper.ensure(nodeD_trans, self.peer_nodes), [])
-
-    def test_trans_compareTrans(self):
-        test_trans1 = {
-                "timestamp": str(datetime.datetime.now()), 
-                "from": "asdf-random-public-key-asdf", 
-                "to": "zxcvzxc-random-public-key-azxcvz", 
-                "amount": 2}
-
-        test_trans2 = {
-                "timestamp": str(datetime.datetime.now()), 
-                "from": "wertwert-random-public-key-asdf", 
-                "to": "yuioyuio-random-public-key-azxcvz", 
-                "amount": 5}
-
-        test_trans3 = {
-                "timestamp": str(datetime.datetime.now()), 
-                "from": "jhkkh-random-public-key-asdf", 
-                "to": "lkmzxcv-random-public-key-azxcvz", 
-                "amount": 2}
-
-        test_trans4 = {
-                "timestamp": str(datetime.datetime.now()), 
-                "from": "kukljh-random-public-key-asdf", 
-                "to": ",mnkjhyuioyuio-random-public-key-azxcvz", 
-                "amount": 5}
-        nodeC_trans = [test_trans1, test_trans2, test_trans3, test_trans4]          # this is my trans
-        nodeA_trans = [test_trans1, test_trans2]                                    # this is peer trans
-        
-       # self.assertTrue(
-       #     Test_compare.comp_list_of_trans_dict(
-       #         self.transhelper._compare_trans(nodeC_trans, nodeA_trans), 
-       #             [test_trans3, test_trans4]))
-
-        self.assertEqual(self.transhelper._compare_trans(nodeC_trans, nodeA_trans), [test_trans3, test_trans4])
-        self.assertEqual(self.transhelper._compare_trans(nodeA_trans, nodeA_trans), [])
 
 
 if __name__ == "__main__":
