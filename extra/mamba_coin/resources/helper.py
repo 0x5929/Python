@@ -3,11 +3,6 @@
 
 # this file is a helper file that will be utilized in ../server.py
 
-#   This project is an idea inspired by the following blog: 
-#   can be found at https://medium.com/crypto-currently/lets-build-the-tiniest-blockchain-e70965a248b
-#   I have renamed the coin into mamba coin, b/c kobe rules
-#   but all credit still goes to the original author of the blogpost
-
 
 import json
 import socket
