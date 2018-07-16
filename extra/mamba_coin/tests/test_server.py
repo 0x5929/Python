@@ -441,7 +441,7 @@ class Testcases_server(unittest.TestCase):
                  patch("server.Server.block_helper.consensus", return_value=[genesis_block, second_block, third_block]), \
                  patch("server.Server.trans_helper.consensus", return_value=[trans1, trans2]), \
                  patch("server.Server.helper.proof_of_work", return_value=36), \
-                 patch("server.Server.this_node_transactions", data["transactions"]) as mock_tnt, \
+                 patch("server.Server.this_node_transactions", [trans1, trans2]) as mock_tnt, \
                  patch("server.Server.blockchain", []) as mock_bc, \
                  patch("server.Server.peer_nodes", []) as mock_pn:
 
@@ -451,6 +451,7 @@ class Testcases_server(unittest.TestCase):
                 # test for node transactions (method sideeffect)
                 # this tests the second sync function, usually will result in []
                 # but this time mock sync returns [trans1, trans2]
+               
                 self.assertEqual(mock_tnt, [trans1, trans2])
 
                 # test for block mined (method output)

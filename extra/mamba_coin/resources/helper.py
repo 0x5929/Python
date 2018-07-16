@@ -3,6 +3,12 @@
 
 # this file is a helper file that will be utilized in ../server.py
 
+#   This project is an idea inspired by the following blog: 
+#   can be found at https://medium.com/crypto-currently/lets-build-the-tiniest-blockchain-e70965a248b
+#   I have renamed the coin into mamba coin, b/c kobe rules
+#   but all credit still goes to the original author of the blogpost
+
+
 import json
 import socket
 import requests
@@ -10,11 +16,21 @@ from block import Block
 
 class Helper:
 
-    #NOTE: for future improvements, this proof_of_work function can also increase difficulty
+    # for future improvements, this proof_of_work function can also increase difficulty
     # and based on the previous hashes of the chain 
     def proof_of_work(self, last_proof):
+        """
+            param1 obj: self object
+            param2 int: last mined block's proof-of-work
+
+            return int: resolved new proof-of-work
+        
+            external api called by each server's node 
+            mine method to mine a new coin with a new proof
+        
+        """
         if last_proof == None:
-            last_proof = 1                  # this will result of the new proof being 9
+            last_proof = 1                                                      # this will result of the new proof being 9
 
         incrementor = last_proof + 1
 
@@ -28,10 +44,20 @@ class Helper:
 
     class Node_helper:
 
-        # this resolves local ip, future improvement is to resolve public ip, if and once mamba coin is deployed
+        # this resolves local ip
         # public ip can be resolved by urllib request to getmyip.com or similar sites
 
         def _resolve_host(self):
+            """
+                param1 obj: self object
+
+                return str: local(public if needed) ip of node's host
+
+                internal api called by consensus to help remove the current host
+                node in the consensus process
+
+            
+            """
 
             google_dns = "8.8.8.8"                                      # we will attempt to connect to google's public dns server
             google_dns_port = 80
@@ -47,9 +73,22 @@ class Helper:
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 
-        # sync nodes will take the most amount of nodes in network to be true
         # this can also be improved to have a security check, to ensure node integrity
         def consensus(self, peer_nodes):
+            """
+                param1 obj: self object
+                param2 list: current peer node list
+            
+                return list: updated peer node's list
+                
+                external api called by Server._updateList
+                to update this server node's peer_node list
+                
+                current policy: 
+                    1. individually evaluate each node, and keep all the nodes we dont have
+                    2. will not keep this node's host:port as one of the nodes on the network
+            
+            """
 
             add_nodes = []
             for each_server_nodes in self._find_other_nodes(peer_nodes):        # this function call returns [[S1nodes], [S2nodes], ...]
@@ -66,14 +105,24 @@ class Helper:
             return self._update_nodes(peer_nodes, add_nodes)                    # remember peer_nodes is the older version to be synced
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------    
-        # called by nodes_consensus to extract peer node list from peer nodes
         def _find_other_nodes(self, peer):
+            """
+                param1 obj: self object
+                param2 list: current peer_node list
+
+                return list: list of all network's node_lists
+
+                internal api called by consensus to return a list of 
+                peer_node list
+            
+            
+            """
             all_nodes_on_each_network = []
 
             for p in peer:
                 response = None
                 try:
-                    response = requests.get('http://{}/get_nodes'.format(p))
+                    response = requests.get('http://{}/get_nodes'.format(p))            # acquiring nodes from all other servers
                 except:
                     pass
 
@@ -86,9 +135,20 @@ class Helper:
 
 #------------------------------------------------------------------------------------------------------------------------------------------------- 
         def _have_node(self, node, my_nodes):
+            """
+                param1 obj: self object
+                param2 dict: node dictionary that we are comparing
+                param3 list: list of current peer_nodes
+
+                return bool: whether or not current peer_nodes have the evaluated node
+            
+                internal api called by node consensus to check if the current peer_node list 
+                contain the evaluated node
+            
+            """
             for n in my_nodes:
                 host = node['host'] + ':' + node['port']
-                if host == n:                                                   # meaning I already have this node
+                if host == n:                                                           # meaning I already have this node
 
                     return True
 
@@ -96,11 +156,20 @@ class Helper:
 
 #------------------------------------------------------------------------------------------------------------------------------------------------
         
-        # called by nodes_consensus to updated current node's back to the calling server 
         def _update_nodes(self, peer_nodes, to_be_added_nodes):
+            """
+                param1 obj: self object
+                param2 list: current peer_nodes list
+                param3 list: the list of nodes we need to add [{dict}]
+            
+                return list: a list of updated peer_nodes for node consensus
+            
+                internal api called by node consensus to return the updated peer_node list
+            
+            """
 
             for node in to_be_added_nodes:
-                host = node['host'] + ':' + node['port']                            # converted back to host:port format for calling server
+                host = node['host'] + ':' + node['port']                                # converted back to host:port format for calling server
                 peer_nodes.append(host)
             
             return peer_nodes
@@ -110,49 +179,64 @@ class Helper:
 
     class Blockchain_helper:
 
-        # the two methods below adds an abstraction level to the Server class, so Server does not have to deal with Block
+        # the two methods below adds an abstraction level to the Server class, so Server does not have to deal with Block directly
         def create_gen_block(self):
             """
-                called by Server.miner if needed a genesis block to kickstart the chain
+                param1 obj: self object
+
+                return obj: Block class genesis block object
+                
+                external api called by Server.miner if needed a genesis block to kickstart the chain
             
             """
             return Block.create_genesis_block()
 
         def create_block(self, index, timestamp, data, prev_hash):
             """
-                called by Sever.miner, for the new mined block
+                param1 obj: self object
+                param2 int: index of the block created
+                param3 str: string of the block creation time
+                param4 dict: data dictionary consists of list of transactions, and proo-of-work
+                param5 str: hash of the last block
+
+                return Block class object 
+
+                external api called by Sever.miner, for the new mined block
             
             """
             return Block(index, timestamp, data, prev_hash=prev_hash)
 
         # note, for future improvements, we can also add security to this function
         # by checking previous hashes of the blockchain to ensure integrity
-        # also we should account for two blocks mined around the same time (between first and second sync of mine api)
-        # would need to honor the earliest stamped mined block's chain
         def consensus(self, blockchain, peernodes):
             """
+                param1 obj: self object
+                param2 list: list of current blockchain
+                param3 list: list of current peer_nodes
+
+                return list: updated blockchain for Server
+
+                external api called by Server._updateList
+
                 Current policies: 
                         1. always sync the longest chain
                         2. if same length, we sync earlier mined block's chain
-                        3. if same length, and last blocks arent mined block, 
-                            we pass
             
             """
             longest_chain = blockchain
             auto_sync = False
     
             for chain in self._find_other_chains(peernodes):
-                if len(longest_chain) < len(chain):
+                if len(longest_chain) < len(chain):                                                 # 1. take the longer chain        
                     longest_chain = chain
 
-                # could be most of the case, but could be rare when two coins are mined closely
-                elif len(longest_chain) == len(chain) and len(chain) != 0:
+                elif len(longest_chain) == len(chain) and len(chain) != 0:                          # 2. autosync the earlier chain
                     auto_sync = self._compare_last(longest_chain, chain)
 
                     if auto_sync is True:
                         longest_chain = chain
-                    else:                           # meaning we still take our current longest chain
-                        continue
+                    else:                                                                           # meaning take our current longest chain
+                        continue                                            
 
             # scenario when auto_sync is turned on: compared block is the same length and has an earlier mined block (last block),
             # in that case, every other node's chain when compared after, will be "auto"synced no matter what, 
@@ -167,6 +251,14 @@ class Helper:
 
         def _compare_last(self, current_longest_chain, chain_to_be_evaluated):
             """
+                param1 obj: self object
+                param2 list: current longest blockchain list from consensus 
+                param3 list: same length as the longest chain, to be evaluated list
+
+                return bool: whether or not autosync to sync the equalivated length longest chain
+
+                internal api called by blockchain consensus to evaluate autoSync in update
+
                 Current policies:
                         1. return false if last blocks of chains are not mined chain
                         2. return false if current_longest_chain has an earlier stamped coin
@@ -176,6 +268,8 @@ class Helper:
             
             
             """
+
+            # extracting data from dict
             current_chain_timestamp =  current_longest_chain[-1]["timestamp"]
             chain_to_be_evaluated_timestamp = chain_to_be_evaluated[-1]['timestamp']
             
@@ -189,14 +283,18 @@ class Helper:
             else:
                 return False
             
+            
+            # evaluation
 
+            # if last blocks arent mined blocks
             if (current_lastblock_lastTrans_from is not "network") or (evaulate_lastblock_lastTrans_from is not "network"):
                 return False
-            # note taking the max of two timestamps will return the later stamped one
+
+            # if the current chain timestamp is earlier than evaluated chain timestamp
             elif max(current_chain_timestamp, chain_to_be_evaluated_timestamp) is chain_to_be_evaluated_timestamp:
                 return False
-            # below condition means the current chain timestamp is the later one, and we need to auto sync
-            # the chain that is being evaluated 
+
+            # if the current chain timestamp is the later one, and we need to auto sync
             elif max(current_chain_timestamp, chain_to_be_evaluated_timestamp) is current_chain_timestamp:
                 return True
 
@@ -205,27 +303,50 @@ class Helper:
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 
-        # called by block_consensus to extract blockchains from peer nodes
         def _find_other_chains(self, peer_nodes):
+            """
+                param1 obj: self object
+                param2 list: current peer_nodes
+
+                return list: list of blockchain lists from peers
+
+                internal api called by blockchain consensus
+            
+            
+            """
             chains = []
             
-            for peer in peer_nodes:
+            for peer in peer_nodes:                                               # iterating through all peers
+
                 response = None
                 try:
-                    response = requests.get('http://{}/get_blocks'.format(peer))
+                    response = requests.get('http://{}/get_blocks'.format(peer))  # retrieving blockchains from peer
                 except:
                     pass
 
+                output = "[+] Blocks from peer at {}: {}".format(peer, response.content)
+
                 if response is not None and response.status_code == 200:
-                    print "[+] Blocks from peer at {}: {}".format(peer, response.content)
+
+                    print output
                     chains.append(json.loads(response.content))                   # remember to load the json object to list(dict)before append
     
     
             return chains
     
 #------------------------------------------------------------------------------------------------------------------------------------------------- 
-        # called by block_consensus to update blockchain to calling server
         def _update_blockchain(self, blockchain, new_blockchain, auto_update=False):    
+            """
+                param1 obj: self object
+                param2 list: current blockchain list
+                param3 list: blockchain list to be updated 
+                param4 bool: auto_update feature to update same length lists, default: False
+
+                return list: updated list of blockchain
+            
+                internal api called by blockchain consensus
+            
+            """
 
             if len(new_blockchain) > len(blockchain) or auto_update is True:        # if the new blockchain is longer than mine
                 ret = []                                                            # or if autoupdate is on, we take the new chain
@@ -242,27 +363,47 @@ class Helper:
 
     class Transaction_helper:
 
-        # for future improvements, we should add a checker in this function to check the vadility of all transactions, make sure 
-        # no bogus transactions are present when updated
         def consensus(self, transactions, peernodes):
-            my_transactions = transactions
+            """
+                param1 obj: self object
+                param2 list: current list of this_node_transactions
+                param3 list: current list of peer_nodes
 
-            for peer_transactions in self._find_other_transactions(peernodes):
+                return list: updated list of transactions
+            
+                external api called by Server._updateList to update list of transactions
+
+                current policies: 
+                    1. take the longest list of transactions among peer
+
+            """
+            my_transactions = transactions                                                  # grabbing current trans list
+
+            for peer_transactions in self._find_other_transactions(peernodes):              # iterate through each of peer's trans list
                 if len(my_transactions) < len(peer_transactions):
-                    my_transactions = peer_transactions
+                    my_transactions = peer_transactions                                     # if peer trans is longer than current, take peer
 
             return self._update_transactions(transactions, my_transactions)
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
         
-        # called by trans_consensus to extract transaction list from peer nodes
         def _find_other_transactions(self, peer_nodes):                  
+            """
+                param1 obj: self object
+                param2 list: current list of peer_nodes
+
+                return list: list of transaction lists among peer
+
+                internal api called by transaction consensus 
+            
+            
+            """
             transactions = []
 
             for peer in peer_nodes:
                 response = None
                 try:
-                    response = requests.get('http://{}/get_trans'.format(peer))
+                    response = requests.get('http://{}/get_trans'.format(peer))         # retrieving list of transactions from peer
                 except:
                     pass
 
@@ -273,18 +414,38 @@ class Helper:
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 
-        # called by trans_consensus to update transaction list to the calling server
         def _update_transactions(self, old_transactions, to_be_updated_transactions):
+            """
+                param1 obj: self object
+                param2 list: list of current transactions
+                param3 list: list of to be updated transactions
+
+                return list: list of updated transactions
+
+                internal api called by transaction consensus
+            
+                current policy: 
+                    1. return the longest list of transaction dictionaries 
+            """
             if len(to_be_updated_transactions) <= len(old_transactions):
                 return old_transactions
+
             else:
                 return to_be_updated_transactions                   # no need for conversion, because its already in the format we want for server
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 
-        # called by server's /clear_trans DELETE api to ensure we don't delete unaccounted transactions
-        # simplified from original design 
         def ensure(self, current_transactions,  delete_list_of_trans):
+            """
+                param1 obj: self object
+                param2 list: list of current transactions
+                param3 list: list of transactions to be delete/account for
+
+                return list: list of newly updated transactions
+
+                external api called by Server.clear_trans_handler to ensure we account for all transcations
+            
+            """
             
             new_current_t = []
 

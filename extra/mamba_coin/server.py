@@ -17,6 +17,14 @@
 
 
 """
+
+#   This project is an idea inspired by the following blog: 
+#   can be found at https://medium.com/crypto-currently/lets-build-the-tiniest-blockchain-e70965a248b
+#   I have renamed the coin into mamba coin, b/c kobe rules
+#   but all credit still goes to the original author of the blogpost
+
+
+
 ##################################################################################################################################################
 
 # SERVER : 
@@ -35,14 +43,13 @@
 ##################################################################################################################################################
 
 # importing required modules
-from flask import Flask                                                 # for our http server
-from flask import request                                               # for http server's request module
-#from resources import Block                                             # for blockchain class operations
-from resources import Helper                                            # for helper class operations
 import sys                                                              # for system program implementation
 import json                                                             # for json loading and dumping
 import datetime                                                         # for time operations
 import requests                                                         # for http request operations
+from flask import Flask                                                 # for our http server
+from flask import request                                               # for http server's request module
+from resources import Helper                                            # for helper class operations
 
 ##################################################################################################################################################
 
@@ -99,7 +106,8 @@ class Server:
         
         elif kwargs is not None and 'add_trans' in kwargs and kwargs['add_trans'] is True:
 
-            cls.this_node_transactions.append(kwargs['trans'])
+            # future improvements:  need to have a transaction caluclator, to caluclate the validity of the transaction
+            cls.this_node_transactions.append(kwargs['trans'])                                  
 
         elif kwargs is not None and 'blockchain' in kwargs and kwargs['blockchain'] is True:
 
@@ -113,8 +121,36 @@ class Server:
             cls.peer_nodes.append(kwargs['peer'])
 
         else:
+
             pass
         
+#------------------------------------------------------------------------------------------------------------------------------------------------
+    @classmethod
+    def _sync_all_lists(cls, **kwargs):
+        """
+            param1 obj: cls object
+            
+            return None: syncs peer_nodes, blockchain, this_node_transactions 
+
+            This is an internal api called by miner, and clear_trans handler
+            since all transactions are broadcasted, and host node's responsible for syncing 
+            peer_nodes with the network, so only changes aplied to the blockchain will need us to resync. 
+        
+        """
+        if len(kwargs.keys()) == 0:                                         # sync all lists
+            cls._updateList(peer_nodes=True)
+            cls._updateList(blockchain=True)
+            cls._updateList(node_transactions=True)
+        elif kwargs is not None and "peer_nodes" in kwargs:                 # sync only peer_nodes
+            cls._updateList(peer_nodes=True)
+        elif kwargs is not None and "blockchain" in kwargs:                 # sync only blockchain
+            cls._updateList(blockchain=True)
+        elif kwargs is not None and "node_transactions" in kwargs:          # sync only this_node_transactions
+            cls._updateList(node_transactions=True)
+            
+
+            
+
 #++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 # transaction related handlers and methods
 
@@ -131,7 +167,7 @@ class Server:
         
         """
 
-        for t in cls.this_node_transactions:                     # iterating through current list of transactions 
+        for t in cls.this_node_transactions:                        # iterating through current list of transactions 
             if json.dumps(transaction) == json.dumps(t):            # if input new trans is the same as any of our list, return false
                 return False
 
@@ -167,14 +203,6 @@ class Server:
 
                 cls._updateList(add_trans=True, trans=new_trans)                        # adding new transactions to this node's list
                 
-    
-                # standard output our transaction
-                print "=================================================="
-                print "**New Transaction**"
-                print "From: {}".format(new_trans['from'])
-                print "To: {}".format(new_trans['to'])
-                print "Amount: {}".format(new_trans['amount'])                          
-    
                 return "Transaction submission successful\n"                            # response through server
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
@@ -188,18 +216,16 @@ class Server:
             This is an internal api called by
             peer  node's mining functionality to clear 
             this node's transactions after a block is mined with all transactions
+            or have the unaccounted transactions left
         
         """
 
-        if request.method == 'POST':
-            delete_data = json.loads(request.get_json())
-            cls._updateList(ensure_transactions=True, delete_data=delete_data)
-                                                                    # clears transaction, this api is called by miners of other nodes 
-                                                                    # either it returns an empty trans list or remaining unsynced trans
-                                                                    # if there are any
-        return ""                                                   # NOTE: ensure trans will ensure all transactions are either
-                                                                    # accounted and cleared/deleted, or have the remaining 
-                                                                    # unaccounted transactions
+        if request.method == 'POST':                                                    
+            delete_data = json.loads(request.get_json())                                # extract to be deleted data
+            cls._updateList(ensure_transactions=True, delete_data=delete_data)          # delete transactions
+            cls._sync_all_lists(blockchain=True)                                        # to grab the new blockchain                
+
+        return ""                                                   
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -214,7 +240,7 @@ class Server:
         
         """
 
-        cls._updateList(node_transactions=True)
+        cls._sync_all_lists(node_transactions=True)                                     # sync this_node_transactions
 
         return "\n[+] Transactions synced: {}".format(str(cls.this_node_transactions))
 
@@ -231,8 +257,8 @@ class Server:
             transactions for syncing purposes
         
         """
-        # return json format of this node's transaction list
-        return json.dumps(cls.this_node_transactions)                    
+        return json.dumps(cls.this_node_transactions)                                   # return json format of this node's transaction list
+
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -249,7 +275,7 @@ class Server:
         
         """
         
-        cls._updateList(blockchain=True)
+        cls._sync_all_lists(blockchain=True)                                            # sync blockchain
 
         return "\n[+] Blocks synced: {}".format(str(cls.blockchain))
 
@@ -269,11 +295,11 @@ class Server:
 
         blocks = []
         
-        for block in cls.blockchain:                                         # remember block is in block object format
+        for block in cls.blockchain:                                            # remember block is in block object format
             blocks.append({
                     "index"    : block.index,                                   # block.index is int 
                     "timestamp": str(block.timestamp),
-                    "data"     : block.data,                                    # block.data is in dict format
+                    "data"     : block.data,                                    # block.data is already in dict format
                     "hash"     : str(block.hash)
                 })
 
@@ -297,9 +323,9 @@ class Server:
         """
 
 
-        cls._updateList(peer_nodes=True)
+        cls._sync_all_lists(peer_nodes=True)                                    # sync peer_nodes
 
-        return "\n[+] Nodes synced: {}".format(str(cls.peer_nodes))
+        return "\n[+] Nodes synced: {}".format(str(cls.peer_nodes))             # response through server
 
 #-------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -316,7 +342,7 @@ class Server:
         """
         nodes = []
 
-        for n in cls.peer_nodes:                                 # converting into json objects to be sent via http requests
+        for n in cls.peer_nodes:                                    # converting into json objects to be sent via http requests
             host = n.split(':')[0]
             port = n.split(':')[1]
             node = {
@@ -346,14 +372,14 @@ class Server:
         # url format: http://192.168.1.249:5000/add_peer/?host=192.168.1.10&port=50
 
         if request.method == "GET":
-            host = request.args['host'] if 'host' in request.args else 'localhost'
+            host = request.args['host'] if 'host' in request.args else 'localhost'      # if there are no ip, we use localhost
                                                                                
-            port = request.args['port']                                         
+            port = request.args['port']                                                 # extract data from GET query 
             peer = host + ':' + port
             
-            cls._updateList(add_peer=True, peer=peer)
+            cls._updateList(add_peer=True, peer=peer)                                   # add peer
         
-        return '\n[+] peer added: {}'.format(peer)                              # response thru server
+        return '\n[+] peer added: {}'.format(peer)                                      # response thru server
 
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -375,9 +401,7 @@ class Server:
         """
 
         # before mining, sync nodes, blocks, and transactions
-        cls._updateList(peer_nodes=True)
-        cls._updateList(blockchain=True)
-        cls._updateList(node_transactions=True)
+        cls._sync_all_lists()
 
         # after the first sync, lets see if a genesis block is present
         if len(cls.blockchain) == 0:
@@ -403,14 +427,13 @@ class Server:
             }
 
         mined_block = cls.block_helper.create_block(last_block.index + 1, datetime.datetime.now(), data, last_block.hash)
-        #block = Block(last_block.index + 1, datetime.datetime.now(), data, prev_hash=last_block.hash) 
-        cls.blockchain.append(mined_block)                                                 # adding block to chain
+        cls.blockchain.append(mined_block)                                              # adding block to chain
 
         # clean up
             # exclude miner transaction
         delete_data = json.dumps(cls.this_node_transactions[:(len(Server.this_node_transactions) - 1)])          
 
-        for peer in cls.peer_nodes:                                                  # empty the accounted transactions 
+        for peer in cls.peer_nodes:                                                     # empty the accounted transactions 
             try: 
                 requests.post("http://{}/clear_trans".format(peer), json=delete_data)   # clear_trans api will check for any unaccounted 
             except:                                                                     # transactions in other node's so they are not deleted
@@ -422,10 +445,7 @@ class Server:
                                                                                         # that may happen between last sync and mining procedure
 
         # resync peer_nodes, and blocks, and trans
-        cls._updateList(peer_nodes=True)
-        cls._updateList(blockchain=True)
-        cls._updateList(node_transactions=True)
-
+        cls._sync_all_lists()
 
         return json.dumps({                                                             # response thru server
                 "index": mined_block.index,
@@ -434,6 +454,7 @@ class Server:
                 "hash": str(mined_block.hash)
             }) + "\n"
     
+
 #+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
     
 
@@ -511,13 +532,15 @@ class Server:
         [+] Welcome to Mambacoin network server node
         
         [+] Current time is: %s 
-        [+] External program dependencies: cURL 
+        [+] External program dependencies: cURL
+
+        [+] Please execute the following commands in a different env/terminal
 
             $ curl "host:port/add_peer/?host=<host>&port=<port>"        ---- Add peer node to node list
             $ curl "host:port/sync_nodes"                               ---- Sync node list
             $ curl "host:port/sync_blocks"                              ---- Sync blockchain list
             $ curl "host:port/sync_trans"                               ---- Sync transaction list 
-            $ curl "host:port/submit_transactions" \\                   ---- Post transactions to node
+            $ curl "host:port/submit_transactions" \\                    ---- Post transactions to node
                     -H "application/json"          \\
                     -d "{"timestamp":<transaction timestamp>,\\
                          "from"     : <transaction from address>, \\
