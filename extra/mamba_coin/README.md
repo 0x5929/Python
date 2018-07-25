@@ -19,3 +19,10 @@
 		4. a tougher proof of work
 		5. GUI interface, web user interface to see wallet amounts (have to be a separete class) 
 		6. thats all I can think of right now...
+
+
+	BEFORE PRODUCTION DEPLOYMENT: 
+		1. Intergration Testing
+		2. System Testing
+		3. Maybe User testing
+
