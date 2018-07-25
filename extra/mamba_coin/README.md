@@ -24,5 +24,4 @@
 	BEFORE PRODUCTION DEPLOYMENT: 
 		1. Intergration Testing
 		2. System Testing
-		3. Maybe User testing
 
