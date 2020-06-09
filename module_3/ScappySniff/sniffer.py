@@ -63,8 +63,8 @@ arpPkts = sniff(iface="eth0", filter="arp", count=3)
 	# i changed it back to 5
 icmpPkts = sniff(iface="eth0", filter="icmp", count=5, prn=lambda x: x.summary())
 print "=========================================================================================================="
-print "finished with on the spot printing of icmp packets using sniff of scappy..."
-## NOTE: scappy will take out the hardcode aspect of rawsocket packet sniffing, so we can just worry about the sniff/anazlysis part
+print "finished with on the spot printing of icmp packets using sniff of scapy..."
+## NOTE: scapy will take out the hardcode aspect of rawsocket packet sniffing, so we can just worry about the sniff/anazlysis part
 
 
 # convert packet as a string
@@ -75,8 +75,8 @@ print "=========================================================================
 
 # to reconstruct a packet from string to packet format, we need to know the string formatted packet's most outtermost protocol
 	# for us its the ethernet header (pretty much always)
-	# so we call from the scappy library, Ether(pkt) this will convert the string pkt pkt to its original  packet form
-	# scappy will do all the work underneath
+	# so we call from the scapy library, Ether(pkt) this will convert the string pkt pkt to its original  packet form
+	# scapy will do all the work underneath
 convertedBackPkt = Ether(stringPacket)
 
 print "CONVERTED BACK TO PACKET FORMAT:"
