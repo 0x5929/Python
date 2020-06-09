@@ -20,7 +20,7 @@ def build_lfilter(pkt):	# so this filter will return either true or false for ea
 	return "GET" in str(pkt)
 
 # the print function is very compact and interesting, we want to join each element of a tuple with a new line
-# note the second element also we are joining each of the output from sprintf method from scappy with a new line
+# note the second element also we are joining each of the output from sprintf method from scapy with a new line
 # but first we need to split each of the return carriage, and end of line of the Raw.load of the packet, which its raw packets payload
 # and we will split all that into a list, which will join each element with a new line
 def get_request_print(pkt):	## NOTE: remember, the r inside split(r"") means the type of string we are splitting, indicating a raw string
