@@ -16,7 +16,7 @@ class EchoServerHandler(SocketServer.BaseRequestHandler):
 
 		while len(data):
 			# self.request = socket.client, so we can call recv or send on it
-			data = self.request.recv(1024)	# this is wihat is recieved from  the request  client
+			data = self.request.recv(1024)	# this is what is received from  the request  client
 			print "The Client Sent: " + data
 			self.request.send(data)	# and the server will send the data back to the client aka echo
 		else: # if there are no more client data

@@ -21,7 +21,7 @@ class Test_compare:
 
             return cls(first, second)._is_same_list_of_blocks()
 
-        print "compare list of objects recieved one or more none list type in params, fatal"
+        print "compare list of objects received one or more none list type in params, fatal"
 
     @classmethod
     def comp_list_of_block_dict(cls, first, second):
@@ -35,7 +35,7 @@ class Test_compare:
 
             return cls(first, second)._is_same_list_of_block_dict()
 
-        print "compare list of dicts recieved one or more none list type in params, fatal"
+        print "compare list of dicts received one or more none list type in params, fatal"
 
     @classmethod
     def comp_block_dict(cls, first, second):
@@ -43,7 +43,7 @@ class Test_compare:
 
             return cls(first, second)._is_same_block_dict()
 
-        print "compare block dicts recieved one or more none dict type in params, fatal"
+        print "compare block dicts received one or more none dict type in params, fatal"
 
     @classmethod
     def comp_list_of_nodes(cls, first, second):
@@ -57,7 +57,7 @@ class Test_compare:
 
             return cls(first,second)._is_same_list_of_nodes()
         else:
-            print "compare list of nodes recieved one or more is not list type in params, fatal"
+            print "compare list of nodes received one or more is not list type in params, fatal"
 
     @classmethod
     def comp_list_of_trans_dict(cls, first, second):
@@ -72,7 +72,7 @@ class Test_compare:
             return cls(first, second)._is_same_list_of_trans()
                     
         else:
-            print "compare list of transaction dicts recieved one or more is not list type in params, fatal"
+            print "compare list of transaction dicts received one or more is not list type in params, fatal"
 
 
     def __init__(self, first, second):

@@ -53,7 +53,7 @@ def getMac(IP):
 	# to ask for the hardware address for the specified input IP
 	# also we should turn off verbose from scapy
 	conf.verb = 0
-		# using the send and recieve layer 2 function,has a timeout of 10 seconds which should be plenty for a LAN
+		# using the send and receive layer 2 function,has a timeout of 10 seconds which should be plenty for a LAN
 			# interval of request is every 0.1 seconds
         request_packet = Ether(dst="ff:ff:ff:ff:ff:ff")/ARP(pdst=IP)
         reply = srp1(request_packet, timeout=10, iface=interface, inter=0.1)

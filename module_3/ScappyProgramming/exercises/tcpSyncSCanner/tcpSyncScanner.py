@@ -70,7 +70,7 @@ RSTACK = 0x14
 def checkHost(ip):
 	# we are going to check by pinping the host
 	conf.verb = 0
-	try: # by using the layer 3 send and recieve for 1 answer packet name ping
+	try: # by using the layer 3 send and receive for 1 answer packet name ping
 		ping = sr1(IP(dst=ip)/ICMP())
 		print "\n[*] Target IP is Up. Starting the Scan Now ~~~"
 	except Exception:

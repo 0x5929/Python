@@ -46,7 +46,7 @@ class multiThreadServerHandler(SocketServer.BaseRequestHandler):
 		print "HEY LOOK! We got a connection from: ", self.client_address
 		self.data = 'dummy'
 		while len(self.data):
-			# whatever data we recieve from client (within 5000 bytes)
+			# whatever data we receive from client (within 5000 bytes)
 			self.data = self.request.recv(5000) # this is equivalent to socket.client.recv(5000)
 			print "The Client Sent: ", self.data
 			# we echo it back to the client

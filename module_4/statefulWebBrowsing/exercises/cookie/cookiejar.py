@@ -41,7 +41,7 @@ else:
 
 
 # this is the second test
-print "now testing if the second browser also recieved the cookiejar from the first browser instance"
+print "now testing if the second browser also received the cookiejar from the first browser instance"
 br1.open("http://localhost/DVWA")
 print br1.title()
 

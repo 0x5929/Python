@@ -14,6 +14,6 @@ see the comments in the dnsspoof.py file and look for the reference website.
 within the reference website, the author wrote about a program which I cannot find in my fedora repositories. this program can be import
 as a module in python, along with scapy.all . this program can manipulate the iptables and firewall settings along with the os module. 
 after the packet coming from port 53 of my router ip will be blocked and denied. for the swole reason of dns spoofing, now the victim
-can only recieve my spoofed dns response, misleading the browswer to cache my redirected ip which can lead to malicious sites. 
+can only receive my spoofed dns response, misleading the browswer to cache my redirected ip which can lead to malicious sites. 
 
 

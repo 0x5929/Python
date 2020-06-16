@@ -33,8 +33,8 @@ class StrcpyBpHook (BpHook):
         recv_str = imm.readString(second_arg_addr)       # since the second argument is the recived string pointer in c
 
         imm.log("Any suspicious string with certain suspicious chars can potential cause of a buffer overflow")
-        imm.log("Recieved String: %s" % recv_str)
-        imm.log("Recieved String Length: %d" % len(recv_str))
+        imm.log("Received String: %s" % recv_str)
+        imm.log("Received String Length: %d" % len(recv_str))
 
 
 ## for the immmunity debugger platform, the main function must have an input list of args 

@@ -76,4 +76,4 @@ def logResults(imm, fastHookObj):
         # logging results
         imm.log("Any suspicious string with certian suspicious chars can potential cause of a buffer overflow")
         imm.log("Received String: %s" % string)
-        imm.log("Recieved String Length: %d" % len(string))
+        imm.log("Received String Length: %d" % len(string))

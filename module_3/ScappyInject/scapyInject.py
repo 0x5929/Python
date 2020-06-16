@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 
-# IN THIS SCRIPT, WE LEARNED HOW TO SEND PACKETS TO A DISTANT HOST, AND HOW TO RECIEVE, AND CHANGE UP SCAPY'S ROUTING TABLE IF NECESSARY
+# IN THIS SCRIPT, WE LEARNED HOW TO SEND PACKETS TO A DISTANT HOST, AND HOW TO RECEIVE, AND CHANGE UP SCAPY'S ROUTING TABLE IF NECESSARY
 
 
 # importing the whole scapy library
@@ -44,7 +44,7 @@ sendp(pkt, iface="eth0")
 
 
 
-# SEND AND RECIEVE PACKETS
+# SEND AND RECEIVE PACKETS
 	# important to use because the replies can be seen in scapy, and we dont have to use another program like tcpdump to see replies
 	# layer 2
 		# srp() method, returns answers and unanswered packets
@@ -55,13 +55,13 @@ sendp(pkt, iface="eth0")
 
 # if we were using layer 3, we dont need to add in the etherheader, as scapy will do that for us
 # note we added a ttyl for ip header, it states it will travel through 22 routers/switches/bridges or layer 2 of OSI
-print "Sending and receving ICMP requets to  google.com, using scapy send and recieve at layer 2"
+print "Sending and receving ICMP requets to  google.com, using scapy send and receive at layer 2"
 srp1(Ether()/IP(dst="google.com", ttl=22)/ICMP()/"hello world")
 print "="*50
 
 
 print "Sending just IP packet to google.com, using scapy at layer 3, timing out after 3 seconds "
-# sending and recieving using layer 3, we dont need a ether header, but just IP packet will never get a reponse, unlike ICMP echo request
+# sending and receiving using layer 3, we dont need a ether header, but just IP packet will never get a reponse, unlike ICMP echo request
 # so we need to set a timout param in seconds, of how long to try before getting a resposne
 sr1(IP(dst="google.com"), timeout=3)
 print "="*50

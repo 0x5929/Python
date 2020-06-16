@@ -17,7 +17,7 @@ import Queue
 # threading worker class
 
 class SlaveThreads(threading.Thread):
-	def __init__(self, i, queue): # think about what each thread will recieve as args
+	def __init__(self, i, queue): # think about what each thread will receive as args
 		threading.Thread.__init__(self)	#calling parent thread class for thread workers
 		self.i = i
 		self.queue = queue

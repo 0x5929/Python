@@ -60,14 +60,14 @@ print "Received connection from: ", ip
 # to send data to the client
 client.send("Hello World from the server socket!!!!!")
 
-# to recieve data from the client, takes arg of buffer size
+# to receive data from the client, takes arg of buffer size
 # client.recv(2048) 
 
 print "Starting ECHO output..... "
 
 data = 'dummy'	# dummy data
  
-while len(data) : # this loop will recieve data from client, and send it back to the client, until connection stops
+while len(data) : # this loop will receive data from client, and send it back to the client, until connection stops
 	data = client.recv(2048)
 	print "Client sent: ", data
 	client.send(data)

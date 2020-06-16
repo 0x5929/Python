@@ -124,7 +124,7 @@ class CommandToExecute:
 
     def __init__(self, message):
         """
-            param1 string: json message recieved from master
+            param1 string: json message received from master
             return obj: CommandToExecute class object 
         
         """
@@ -393,8 +393,8 @@ class StdOutListener(StreamListener):
     """
     global __CONFIG__
 
-    # the on_data method is called everytime raw data is recieved from the stream connection
-    # override when we need to directly deal with the raw data recieved from stream
+    # the on_data method is called everytime raw data is received from the stream connection
+    # override when we need to directly deal with the raw data received from stream
 
     def on_data(self, raw_data):
         """
